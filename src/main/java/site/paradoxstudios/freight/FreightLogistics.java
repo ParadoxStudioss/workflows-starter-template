@@ -69,6 +69,12 @@ public final class FreightLogistics {
     public static final DeferredBlock<Block> CROSSING=BLOCKS.registerBlock("crossing_signal",CrossingBlock::new,
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f)
         .lightLevel(s->s.getValue(CrossingBlock.POWERED)?12:0));
+    public static final DeferredBlock<Block> CROSSING_BARRIER=BLOCKS.registerBlock("crossing_barrier",CrossingBarrierBlock::new,
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f));
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> BARRIER_ITEM=ITEMS.registerSimpleBlockItem("crossing_barrier",CROSSING_BARRIER);
+    public static final DeferredBlock<Block> YARD_LAMP=BLOCKS.registerBlock("yard_lamp",CrossingBlock::new,
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f).lightLevel(state->state.getValue(CrossingBlock.POWERED)?15:0));
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> LAMP_ITEM=ITEMS.registerSimpleBlockItem("yard_lamp",YARD_LAMP);
     public static final DeferredItem<net.minecraft.world.item.BlockItem> CROSSING_ITEM=ITEMS.registerSimpleBlockItem("crossing_signal",CROSSING);
 
     public static final DeferredHolder<MenuType<?>,MenuType<ManagementMenu>> MANAGEMENT_MENU=
@@ -93,7 +99,7 @@ public final class FreightLogistics {
         .icon(()->new ItemStack(MACHINES.get("management_computer").get()))
         .displayItems((params,output)->{
             for(var block:MACHINES.values())output.accept(block.get());
-            output.accept(CROSSING.get());
+            output.accept(CROSSING.get());output.accept(CROSSING_BARRIER.get());output.accept(YARD_LAMP.get());
             for(var item:PARTS.values())output.accept(item.get());
         }).build());
 

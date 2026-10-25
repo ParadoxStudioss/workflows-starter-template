@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "powered=false": {
+      "model": "freightlogistics:block/yard_lamp_off"
+    },
+    "powered=true": {
+      "model": "freightlogistics:block/yard_lamp_on"
+    }
+  }
+}

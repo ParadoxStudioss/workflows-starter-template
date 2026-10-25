@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 
-public final class CrossingBlock extends Block {
+public class CrossingBlock extends Block {
     public static final BooleanProperty POWERED=BlockStateProperties.POWERED;
     public CrossingBlock(BlockBehaviour.Properties properties){
         super(properties);

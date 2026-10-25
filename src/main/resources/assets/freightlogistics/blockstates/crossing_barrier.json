@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "powered=false": {
+      "model": "freightlogistics:block/crossing_barrier_open"
+    },
+    "powered=true": {
+      "model": "freightlogistics:block/crossing_barrier_closed"
+    }
+  }
+}

@@ -16,5 +16,7 @@
   "item.freightlogistics.storage_drive": "Storage Drive",
   "item.freightlogistics.network_card": "Network Card",
   "item.freightlogistics.cooling_unit": "Cooling Unit",
-  "item.freightlogistics.railway_credit": "Railway Credit"
+  "item.freightlogistics.railway_credit": "Railway Credit",
+  "block.freightlogistics.crossing_barrier": "Railway Crossing Barrier",
+  "block.freightlogistics.yard_lamp": "Industrial Yard Lamp"
 }
