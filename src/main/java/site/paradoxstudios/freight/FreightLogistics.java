@@ -55,7 +55,7 @@ public final class FreightLogistics {
     public static final DeferredBlock<Block> CROSSING = BLOCKS.registerBlock(
         "crossing_signal", CrossingBlock::new,
         BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f).lightLevel(s->s.getValue(CrossingBlock.POWERED)?12:0));
-    public static final DeferredItem<Item> CROSSING_ITEM = ITEMS.registerSimpleBlockItem("crossing_signal",CROSSING);
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> CROSSING_ITEM = ITEMS.registerSimpleBlockItem("crossing_signal",CROSSING);
     private static void machine(String id,String displayName) {
         DeferredBlock<Block> block=BLOCKS.registerBlock(id, properties->new MachineBlock(properties,displayName),
             BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.4f));
