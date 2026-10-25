@@ -53,7 +53,7 @@ public final class FreightCommands {
         );
     }
     private static int help(CommandSourceStack source){
-        info(source,"§6Freight & Logistics §7v0.1.0-alpha");
+        info(source,"§6Freight & Logistics §7v0.1.2");
         info(source,"§e/freight company create <name> §7- create company");
         info(source,"§e/freight balance §7- company funds");
         info(source,"§e/freight contracts [1-10] §7- paginated contract list");
@@ -108,7 +108,7 @@ public final class FreightCommands {
         }
         return 1;
     }
-    private static int accept(CommandSourceStack source,int id){
+    public static int accept(CommandSourceStack source,int id){
         ServerPlayer p=player(source);if(p==null)return 0;
         FreightData data=FreightData.get(source.getServer());
         if(data.company(p.getUUID())==null){source.sendFailure(Component.literal("You need a company first."));return 0;}
@@ -122,7 +122,7 @@ public final class FreightCommands {
         info(source,"§aAccepted contract #"+c.id+". Gather "+c.count+" "+c.item+" and use /freight deliver.");
         return 1;
     }
-    private static int deliver(CommandSourceStack source){
+    public static int deliver(CommandSourceStack source){
         ServerPlayer p=player(source);if(p==null)return 0;
         FreightData data=FreightData.get(source.getServer());
         FreightData.Company company=data.company(p.getUUID());
@@ -149,7 +149,7 @@ public final class FreightCommands {
         info(source,"§aDelivery verified. Contract #"+job.id+" completed. +"+job.reward+" credits.");
         return 1;
     }
-    private static int depot(CommandSourceStack source){
+    public static int depot(CommandSourceStack source){
         ServerPlayer p=player(source);if(p==null)return 0;
         FreightData data=FreightData.get(source.getServer());
         FreightData.Company company=data.company(p.getUUID());
@@ -168,7 +168,7 @@ public final class FreightCommands {
         info(source,"§7Use /freight shop buy <item> to buy one.");
         return 1;
     }
-    private static int buy(CommandSourceStack source,String requested){
+    public static int buy(CommandSourceStack source,String requested){
         ServerPlayer p=player(source);if(p==null)return 0;
         FreightData data=FreightData.get(source.getServer());
         FreightData.Company company=data.company(p.getUUID());

@@ -1,19 +1,27 @@
 package site.paradoxstudios.freight;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
@@ -30,11 +38,14 @@ public final class FreightLogistics {
     public static final DeferredRegister.Blocks BLOCKS=DeferredRegister.createBlocks(ID);
     public static final DeferredRegister.Items ITEMS=DeferredRegister.createItems(ID);
     public static final DeferredRegister<CreativeModeTab> TABS=DeferredRegister.create(Registries.CREATIVE_MODE_TAB,ID);
-    public static final Map<String, DeferredBlock<Block>> MACHINES=new LinkedHashMap<>();
-    public static final Map<String, DeferredItem<Item>> PARTS=new LinkedHashMap<>();
+    public static final DeferredRegister<MenuType<?>> MENUS=DeferredRegister.create(Registries.MENU,ID);
+    public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES=DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE,ID);
+    public static final Map<String,DeferredBlock<Block>> MACHINES=new LinkedHashMap<>();
+    public static final Map<String,DeferredItem<Item>> PARTS=new LinkedHashMap<>();
 
     static {
         machine("management_computer","Railway Management Computer");
+        // The server rack is a real block entity with persistent component inventory
         machine("server_rack","Industrial Server Rack");
         machine("factory_controller","Factory Controller");
         machine("warehouse_controller","Warehouse Controller");
@@ -52,47 +63,77 @@ public final class FreightLogistics {
         part("cooling_unit");
         part("railway_credit");
     }
-    public static final DeferredBlock<Block> CROSSING = BLOCKS.registerBlock(
-        "crossing_signal", CrossingBlock::new,
-        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f).lightLevel(s->s.getValue(CrossingBlock.POWERED)?12:0));
-    public static final DeferredItem<net.minecraft.world.item.BlockItem> CROSSING_ITEM = ITEMS.registerSimpleBlockItem("crossing_signal",CROSSING);
-    private static void machine(String id,String displayName) {
-        DeferredBlock<Block> block=BLOCKS.registerBlock(id, properties->new MachineBlock(properties,displayName),
+    public static final DeferredBlock<Block> CROSSING=BLOCKS.registerBlock("crossing_signal",CrossingBlock::new,
+        BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.0f)
+        .lightLevel(s->s.getValue(CrossingBlock.POWERED)?12:0));
+    public static final DeferredItem<net.minecraft.world.item.BlockItem> CROSSING_ITEM=ITEMS.registerSimpleBlockItem("crossing_signal",CROSSING);
+
+    public static final DeferredHolder<MenuType<?>,MenuType<ManagementMenu>> MANAGEMENT_MENU=
+        MENUS.register("management",()->new MenuType<>(ManagementMenu::new,FeatureFlags.DEFAULT_FLAGS));
+    public static final DeferredHolder<MenuType<?>,MenuType<RackMenu>> RACK_MENU=
+        MENUS.register("server_rack",()->new MenuType<>(RackMenu::new,FeatureFlags.DEFAULT_FLAGS));
+    public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<RackBlockEntity>> RACK_ENTITY=
+        BLOCK_ENTITIES.register("server_rack",()->
+            new BlockEntityType<>(RackBlockEntity::new,MACHINES.get("server_rack").get()));
+
+    private static void machine(String id,String title) {
+        DeferredBlock<Block> block=BLOCKS.registerBlock(id, p->
+            id.equals("server_rack")?new RackBlock(p):new MachineBlock(p,id,title),
             BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.4f));
         MACHINES.put(id,block);
         ITEMS.registerSimpleBlockItem(id,block);
     }
-    private static void part(String id) {
-        PARTS.put(id,ITEMS.registerSimpleItem(id,new Item.Properties()));
-    }
+    private static void part(String id) {PARTS.put(id,ITEMS.registerSimpleItem(id,new Item.Properties()));}
     public static final DeferredHolder<CreativeModeTab,CreativeModeTab> TAB=TABS.register("main",()->
         CreativeModeTab.builder().title(Component.literal("Freight & Logistics"))
         .withTabsBefore(CreativeModeTabs.REDSTONE_BLOCKS)
-        .icon(()->new net.minecraft.world.item.ItemStack(MACHINES.get("management_computer").get()))
+        .icon(()->new ItemStack(MACHINES.get("management_computer").get()))
         .displayItems((params,output)->{
-            for(var machine:MACHINES.values()) output.accept(machine.get());
+            for(var block:MACHINES.values())output.accept(block.get());
             output.accept(CROSSING.get());
-            for(var part:PARTS.values()) output.accept(part.get());
+            for(var item:PARTS.values())output.accept(item.get());
         }).build());
-    public FreightLogistics(IEventBus bus) {
-        BLOCKS.register(bus);
-        ITEMS.register(bus);
-        TABS.register(bus);
+
+    public FreightLogistics(IEventBus bus){
+        BLOCKS.register(bus);ITEMS.register(bus);TABS.register(bus);
+        MENUS.register(bus);BLOCK_ENTITIES.register(bus);
         NeoForge.EVENT_BUS.register(FreightCommands.class);
     }
+
     public static class MachineBlock extends Block {
-        private final String title;
-        public MachineBlock(Properties props,String title){super(props);this.title=title;}
+        protected final String id;
+        protected final String title;
+        public MachineBlock(Properties props,String id,String title){super(props);this.id=id;this.title=title;}
         @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
-            if(!level.isClientSide){
-                player.sendSystemMessage(Component.literal("§6"+title+" §7["+pos.getX()+", "+pos.getY()+", "+pos.getZ()+"]"));
-                if(title.contains("Depot")) player.sendSystemMessage(Component.literal("§eUse /freight depot set to register your company's home depot."));
-                else if(title.contains("Marketplace")) player.sendSystemMessage(Component.literal("§eUse /freight shop to view equipment available for company credits."));
-                else if(title.contains("Freight Terminal")) player.sendSystemMessage(Component.literal("§eUse /freight contracts, /freight accept <id> and /freight deliver."));
-                else if(title.contains("Server Rack")) player.sendSystemMessage(Component.literal("§ePhysical server component slots and automation processing are planned, not enabled in alpha."));
-                else player.sendSystemMessage(Component.literal("§eUse /freight to open the available management commands."));
+            if(!level.isClientSide&&player instanceof ServerPlayer sp){
+                sp.openMenu(new SimpleMenuProvider((menuId,inventory,viewer)->
+                    new ManagementMenu(menuId,inventory,id,sp,pos),Component.literal(title)));
             }
-            return InteractionResult.SUCCESS;
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+    }
+    public static class RackBlock extends MachineBlock implements net.minecraft.world.level.block.EntityBlock {
+        public RackBlock(Properties props){super(props,"server_rack","Industrial Server Rack");}
+        @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
+            return new RackBlockEntity(pos,state);
+        }
+        @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
+            if(!level.isClientSide&&player instanceof ServerPlayer sp&&level.getBlockEntity(pos) instanceof RackBlockEntity be){
+                sp.openMenu(new SimpleMenuProvider((menuId,inv,viewer)->
+                    new RackMenu(menuId,inv,be),Component.literal("Industrial Server Rack")));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        @Override protected void onRemove(BlockState state,Level level,BlockPos pos,BlockState newState,boolean moved){
+            if(!state.is(newState.getBlock())&&!level.isClientSide&&level.getBlockEntity(pos) instanceof RackBlockEntity be){
+                for(int i=0;i<be.parts.getSlots();i++){
+                    ItemStack stack=be.parts.getStackInSlot(i);
+                    if(!stack.isEmpty()){
+                        net.minecraft.world.Containers.dropItemStack(level,pos.getX()+0.5,pos.getY()+0.5,pos.getZ()+0.5,stack.copy());
+                    }
+                }
+            }
+            super.onRemove(state,level,pos,newState,moved);
         }
     }
 }
