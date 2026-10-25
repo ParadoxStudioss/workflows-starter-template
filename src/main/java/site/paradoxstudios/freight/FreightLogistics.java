@@ -126,6 +126,9 @@ public final class FreightLogistics {
             }));
         NeoForge.EVENT_BUS.register(FreightCommands.class);
         NeoForge.EVENT_BUS.register(DepotAutomation.class);
+        NeoForge.EVENT_BUS.register(StationChunkLoading.class);
+        bus.addListener((net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent e)->
+            e.register(StationChunkLoading.TICKET));
     }
 
     public static class MachineBlock extends Block {
