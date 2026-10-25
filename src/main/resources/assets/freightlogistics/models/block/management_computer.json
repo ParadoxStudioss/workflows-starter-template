@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "minecraft:block/polished_deepslate"
+    "all": "freightlogistics:block/management_computer"
   }
 }

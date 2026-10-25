@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.148'
 }
-version = '0.1.0-alpha'
+version = '0.1.1-alpha'
 group = 'site.paradoxstudios'
 base { archivesName = 'create-freight-logistics' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -16,3 +16,9 @@ neoForge {
     mods { freightlogistics { sourceSet(sourceSets.main) } }
 }
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+sourceSets.main.resources.srcDir("src/generated/resources")
+tasks.register('generateFreightAssets', Exec) {
+    commandLine 'python3', 'tools/generate_assets.py'
+}
+tasks.named('processResources') { dependsOn 'generateFreightAssets' }
