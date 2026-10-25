@@ -10,5 +10,6 @@ public final class FreightClient {
     @SubscribeEvent public static void menus(RegisterMenuScreensEvent ev){
         ev.register(FreightLogistics.MANAGEMENT_MENU.get(),ManagementScreen::new);
         ev.register(FreightLogistics.RACK_MENU.get(),RackScreen::new);
+        ev.register(FreightLogistics.WAREHOUSE_MENU.get(),WarehouseScreen::new);
     }
 }

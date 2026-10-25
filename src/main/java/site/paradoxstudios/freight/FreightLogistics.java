@@ -79,15 +79,21 @@ public final class FreightLogistics {
 
     public static final DeferredHolder<MenuType<?>,MenuType<ManagementMenu>> MANAGEMENT_MENU=
         MENUS.register("management",()->new MenuType<>(ManagementMenu::new,FeatureFlags.DEFAULT_FLAGS));
+    public static final DeferredHolder<MenuType<?>,MenuType<WarehouseMenu>> WAREHOUSE_MENU=
+        MENUS.register("warehouse",()->new MenuType<>(WarehouseMenu::new,FeatureFlags.DEFAULT_FLAGS));
     public static final DeferredHolder<MenuType<?>,MenuType<RackMenu>> RACK_MENU=
         MENUS.register("server_rack",()->new MenuType<>(RackMenu::new,FeatureFlags.DEFAULT_FLAGS));
+    public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<WarehouseBlockEntity>> WAREHOUSE_ENTITY=
+        BLOCK_ENTITIES.register("warehouse",()->
+            BlockEntityType.Builder.of(WarehouseBlockEntity::new,MACHINES.get("warehouse_controller").get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<RackBlockEntity>> RACK_ENTITY=
         BLOCK_ENTITIES.register("server_rack",()->
             BlockEntityType.Builder.of(RackBlockEntity::new,MACHINES.get("server_rack").get()).build(null));
 
     private static void machine(String id,String title) {
         DeferredBlock<Block> block=BLOCKS.registerBlock(id, p->
-            id.equals("server_rack")?new RackBlock(p):new MachineBlock(p,id,title),
+            id.equals("server_rack")?new RackBlock(p):
+            id.equals("warehouse_controller")?new WarehouseBlock(p):new MachineBlock(p,id,title),
             BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(2.4f));
         MACHINES.put(id,block);
         ITEMS.registerSimpleBlockItem(id,block);
@@ -131,6 +137,29 @@ public final class FreightLogistics {
                     new ManagementMenu(menuId,inventory,id,sp,pos),Component.literal(title)));
             }
             return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+    }
+    public static class WarehouseBlock extends MachineBlock implements net.minecraft.world.level.block.EntityBlock {
+        public WarehouseBlock(Properties props){super(props,"warehouse_controller","Warehouse Controller");}
+        @Override public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos,BlockState state){
+            return new WarehouseBlockEntity(pos,state);
+        }
+        @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
+            if(!level.isClientSide&&player instanceof ServerPlayer sp&&level.getBlockEntity(pos) instanceof WarehouseBlockEntity be){
+                sp.openMenu(new SimpleMenuProvider((id,inv,p)->new WarehouseMenu(id,inv,be),
+                    Component.literal("Freight Warehouse")));
+            }
+            return InteractionResult.sidedSuccess(level.isClientSide);
+        }
+        @Override protected void onRemove(BlockState state,Level level,BlockPos pos,BlockState newState,boolean moved){
+            if(!state.is(newState.getBlock())&&!level.isClientSide&&level.getBlockEntity(pos) instanceof WarehouseBlockEntity be){
+                for(int i=0;i<be.inventory.getSlots();i++){
+                    ItemStack stack=be.inventory.getStackInSlot(i);
+                    if(!stack.isEmpty())net.minecraft.world.Containers.dropItemStack(level,
+                        pos.getX()+0.5,pos.getY()+0.5,pos.getZ()+0.5,stack.copy());
+                }
+            }
+            super.onRemove(state,level,pos,newState,moved);
         }
     }
     public static class RackBlock extends MachineBlock implements net.minecraft.world.level.block.EntityBlock {
