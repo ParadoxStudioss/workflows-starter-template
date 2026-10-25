@@ -77,7 +77,7 @@ public final class FreightLogistics {
         MENUS.register("server_rack",()->new MenuType<>(RackMenu::new,FeatureFlags.DEFAULT_FLAGS));
     public static final DeferredHolder<BlockEntityType<?>,BlockEntityType<RackBlockEntity>> RACK_ENTITY=
         BLOCK_ENTITIES.register("server_rack",()->
-            new BlockEntityType<>(RackBlockEntity::new,MACHINES.get("server_rack").get()));
+            BlockEntityType.Builder.of(RackBlockEntity::new,MACHINES.get("server_rack").get()).build(null));
 
     private static void machine(String id,String title) {
         DeferredBlock<Block> block=BLOCKS.registerBlock(id, p->
