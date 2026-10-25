@@ -107,6 +107,7 @@ public final class FreightLogistics {
         BLOCKS.register(bus);ITEMS.register(bus);TABS.register(bus);
         MENUS.register(bus);BLOCK_ENTITIES.register(bus);FEATURES.register(bus);
         NeoForge.EVENT_BUS.register(FreightCommands.class);
+        NeoForge.EVENT_BUS.register(DepotAutomation.class);
     }
 
     public static class MachineBlock extends Block {

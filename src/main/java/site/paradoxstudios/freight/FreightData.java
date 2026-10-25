@@ -24,6 +24,8 @@ public final class FreightData extends SavedData {
             try {
                 UUID owner=c.getUUID("Owner");
                 Company entry=new Company(owner,c.getString("Name"),c.getInt("Balance"),c.getLong("Depot"));
+                entry.depotStation=c.getString("DepotStation");
+                entry.autoParking=c.getBoolean("AutoParking");
                 data.companies.put(owner,entry);
             } catch(Exception ignored){}
         }
@@ -46,6 +48,7 @@ public final class FreightData extends SavedData {
             CompoundTag tag=new CompoundTag();
             tag.putUUID("Owner",c.owner);tag.putString("Name",c.name);
             tag.putInt("Balance",c.balance);tag.putLong("Depot",c.depot);
+            tag.putString("DepotStation",c.depotStation);tag.putBoolean("AutoParking",c.autoParking);
             companyTags.add(tag);
         }
         out.put("Companies",companyTags);
@@ -74,6 +77,8 @@ public final class FreightData extends SavedData {
         public final String name;
         public int balance;
         public long depot;
+        public String depotStation="";
+        public boolean autoParking=false;
         Company(UUID owner,String name,int balance,long depot) {
             this.owner=owner;this.name=name;this.balance=balance;this.depot=depot;
         }

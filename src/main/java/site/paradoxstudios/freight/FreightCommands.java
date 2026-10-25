@@ -36,7 +36,9 @@ public final class FreightCommands {
                     .executes(c->accept(c.getSource(),IntegerArgumentType.getInteger(c,"id")))))
             .then(Commands.literal("deliver").executes(c->deliver(c.getSource())))
             .then(Commands.literal("depot")
-                .then(Commands.literal("set").executes(c->depot(c.getSource()))))
+                .then(Commands.literal("set").executes(c->depot(c.getSource())))
+                .then(Commands.literal("toggle").executes(c->toggleParking(c.getSource())))
+                .then(Commands.literal("status").executes(c->depotStatus(c.getSource()))))
             .then(Commands.literal("shop").executes(c->shop(c.getSource()))
                 .then(Commands.literal("buy")
                     .then(Commands.argument("part",StringArgumentType.word())
@@ -73,7 +75,7 @@ public final class FreightCommands {
         info(source,"§e/freight contracts [1-10] §7- paginated contract list");
         info(source,"§e/freight accept <id> §7- accept available contract");
         info(source,"§e/freight deliver §7- submit real inventory items for your contract");
-        info(source,"§e/freight depot set §7- set depot to current position");
+        info(source,"§e/freight depot set/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
         info(source,"§e/freight railgen §7- generate a test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");
@@ -169,8 +171,29 @@ public final class FreightCommands {
         FreightData data=FreightData.get(source.getServer());
         FreightData.Company company=data.company(p.getUUID());
         if(company==null){source.sendFailure(Component.literal("Create a company first."));return 0;}
-        company.depot=p.blockPosition().asLong();data.setDirty();
-        info(source,"§aCompany depot registered at "+p.blockPosition().toShortString()+".");
+        var station=DepotAutomation.nearbyStation(p.serverLevel(),p.blockPosition(),12);
+        if(station==null){source.sendFailure(Component.literal("Place a Create Train Station within 12 blocks, with a named station, first."));return 0;}
+        company.depot=p.blockPosition().asLong();
+        company.depotStation=station.name;company.autoParking=true;
+        data.setDirty();
+        info(source,"§aDepot registered at Create station: "+station.name+" | Automatic parking enabled.");
+        return 1;
+    }
+    public static int toggleParking(CommandSourceStack source){
+        ServerPlayer p=player(source);if(p==null)return 0;
+        FreightData data=FreightData.get(source.getServer());
+        FreightData.Company co=data.company(p.getUUID());
+        if(co==null||co.depotStation.isBlank()){source.sendFailure(Component.literal("First register a nearby Create train station as a depot."));return 0;}
+        co.autoParking=!co.autoParking;data.setDirty();
+        info(source,"§6Automatic depot return: "+(co.autoParking?"§aENABLED":"§cDISABLED"));
+        return 1;
+    }
+    public static int depotStatus(CommandSourceStack source){
+        ServerPlayer p=player(source);if(p==null)return 0;
+        FreightData.Company co=FreightData.get(source.getServer()).company(p.getUUID());
+        if(co==null)return 0;
+        info(source,"§6Depot: §e"+co.depotStation+" §7/ parking "+(co.autoParking?"§aON":"§cOFF"));
+        info(source,"§7Eligible Create-owned trains: "+DepotAutomation.ownedTrains(p.getUUID()));
         return 1;
     }
     private static final Map<String,Integer> SHOP=Map.of(
