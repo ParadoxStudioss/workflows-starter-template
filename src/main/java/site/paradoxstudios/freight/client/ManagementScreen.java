@@ -1,88 +1,123 @@
 package site.paradoxstudios.freight.client;
 
+import java.util.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import site.paradoxstudios.freight.ManagementMenu;
 
+/** Each physical control machine has its own distinct screen state and action set. */
 public final class ManagementScreen extends AbstractContainerScreen<ManagementMenu> {
-    private static final int BG=0xff202a32, PANEL=0xff2e3d45, BORDER=0xffa17946, TEXT=0xffe9dec2, MUTED=0xffa3b5b9;
-    private final java.util.List<Button> shopButtons=new java.util.ArrayList<>();
-    private final java.util.List<Button> depotButtons=new java.util.ArrayList<>();
-    private final java.util.List<Button> orderButtons=new java.util.ArrayList<>();
-    public ManagementScreen(ManagementMenu menu,Inventory inventory,Component title){
-        super(menu,inventory,title);
-        imageWidth=280;imageHeight=210;
+    private static final int BG=0xff18252c,SCREEN=0xff233940,BORDER=0xffbc9153,
+        TEXT=0xfff2e1be,DIM=0xffa2b9bc,GREEN=0xffa4e7ae,RED=0xffff9c92;
+    private final List<Button> shop=new ArrayList<>(),depot=new ArrayList<>(),orders=new ArrayList<>();
+    private int activeView=-1;
+    public ManagementScreen(ManagementMenu menu,Inventory inv,Component title){
+        super(menu,inv,title);imageWidth=300;imageHeight=222;
         inventoryLabelY=1000;titleLabelY=1000;
     }
-    private void act(int id){
-        if(Minecraft.getInstance().gameMode!=null)Minecraft.getInstance().gameMode.handleInventoryButtonClick(menu.containerId,id);
+    private void action(int id){
+        if(Minecraft.getInstance().gameMode!=null)
+            Minecraft.getInstance().gameMode.handleInventoryButtonClick(menu.containerId,id);
     }
-    private void button(int x,int y,int width,int height,String label,int id,java.util.List<Button> group){
-        Button btn=Button.builder(Component.literal(label),b->act(id))
-            .bounds(leftPos+x,topPos+y,width,height).build();
-        group.add(btn);addRenderableWidget(btn);
+    private void add(List<Button> list,int x,int y,int w,int h,String name,int action){
+        Button b=Button.builder(Component.literal(name),btn->action(action))
+            .bounds(leftPos+x,topPos+y,w,h).build();
+        list.add(b);addRenderableWidget(b);
     }
     @Override protected void init(){
         super.init();
-        String[] labels={"CPU 450","RAM 180","SSD 270","NETWORK 310","COOLING 140","MANIFEST 35","TRAIN VOUCHER 8500"};
-        for(int i=0;i<labels.length;i++)button(16+(i%2)*125,57+(i/2)*30,116,22,labels[i],30+i,shopButtons);
-        button(25,127,226,25,"REGISTER CURRENT POSITION AS DEPOT",25,depotButtons);
-        button(17,170,46,23,"<<",10,orderButtons);
-        button(219,170,46,23,">>",11,orderButtons);
-        for(int i=0;i<4;i++)button(207,62+i*25,57,18,"ACCEPT",20+i,orderButtons);
-        button(85,170,116,23,"DELIVER CARGO",24,orderButtons);
-        updateVisibility();
+        for(int i=0;i<7;i++){
+            String[] names={"CPU","MEMORY","SSD","NETWORK","COOLING","MANIFEST","TRAIN VOUCHER"};
+            String[] prices={"450","180","270","310","140","35","8500"};
+            add(shop,20+i%2*132,61+(i/2)*32,122,26,names[i]+" · "+prices[i],30+i);
+        }
+        add(depot,20,121,260,26,"REGISTER NEARBY CREATE STATION",25);
+        add(depot,20,154,260,26,"TOGGLE AUTOMATIC RETURN",26);
+        add(orders,20,179,46,25,"<",10);
+        add(orders,234,179,46,25,">",11);
+        for(int i=0;i<4;i++)add(orders,218,61+i*27,62,21,"ACCEPT",20+i);
+        add(orders,86,179,128,25,"DELIVER",24);
+        sync();
     }
-    private void updateVisibility(){
-        for(Button b:shopButtons)b.visible=menu.view()==1;
-        for(Button b:depotButtons)b.visible=menu.view()==3;
-        for(Button b:orderButtons)b.visible=menu.view()!=1&&menu.view()!=3;
+    private void sync(){
+        activeView=menu.view();
+        for(Button b:shop)b.visible=activeView==1;
+        for(Button b:depot)b.visible=activeView==3;
+        for(Button b:orders)b.visible=activeView==0||activeView==2;
     }
-    @Override protected void renderBg(GuiGraphics g,float partialTick,int mouseX,int mouseY){
-        updateVisibility();
+    private void line(GuiGraphics g,int yy,String left,String right,int colour){
+        int x=leftPos+20,y=topPos+yy;
+        g.drawString(font,left,x,y,TEXT,false);
+        g.drawString(font,right,leftPos+279-font.width(right),y,colour,false);
+    }
+    @Override protected void renderBg(GuiGraphics g,float delta,int mx,int my){
+        if(activeView!=menu.view())sync();
         int x=leftPos,y=topPos;
-        g.fill(x,y,x+imageWidth,y+imageHeight,BORDER);
-        g.fill(x+2,y+2,x+imageWidth-2,y+imageHeight-2,BG);
-        g.fill(x+8,y+9,x+imageWidth-8,y+36,0xff172228);
-        g.fill(x+8,y+44,x+imageWidth-8,y+imageHeight-9,PANEL);
-        String heading=switch(menu.view()){
-            case 1->"RAILWAY MARKETPLACE";case 2->"FREIGHT TERMINAL";case 3->"DEPOT CONTROLLER";
-            case 4->"FACTORY CONTROLLER";case 5->"WAREHOUSE CONTROL";
-            case 6->"DISPLAY INFORMATION RELAY";case 7->"RAILWAY SIGNAL CONTROL";
-            default->"FREIGHT & LOGISTICS OS";
+        g.fill(x,y,x+300,y+222,BORDER);
+        g.fill(x+2,y+2,x+298,y+220,BG);
+        g.fill(x+9,y+9,x+291,y+42,0xff11222a);
+        g.fill(x+11,y+51,x+289,y+211,SCREEN);
+        String heading=switch(activeView){
+            case 1->"MARKETPLACE  /  PURCHASE TERMINAL";
+            case 2->"FREIGHT DESK  /  CONTRACTS";
+            case 3->"DEPOT DISPATCH  /  HOME STATION";
+            case 4->"FACTORY  /  INDUSTRIAL MONITOR";
+            case 5->"WAREHOUSE  /  STORAGE";
+            case 6->"DISPLAY RELAY  /  NETWORK";
+            case 7->"SIGNAL CABINET  /  TRACKSIDE";
+            default->"PARADOX RAIL OS  /  OVERVIEW";
         };
-        g.drawString(font,heading,x+17,y+17,TEXT,false);
-        if(menu.view()==1){
-            g.drawString(font,"HARDWARE & EQUIPMENT",x+17,y+45,TEXT,false);
-            g.drawString(font,"Company credits: "+menu.val(1),x+17,y+184,0xff8fe1a7,false);
-            g.drawString(font,"Purchases delivered to inventory.",x+17,y+196,MUTED,false);
-        }else if(menu.view()==3){
-            g.drawString(font,"Company depot registered: "+(menu.val(5)==1?"YES":"NO"),x+19,y+60,TEXT,false);
-            g.drawString(font,"Depot location saved to world data.",x+19,y+81,MUTED,false);
-            g.drawString(font,"Automatic train parking is not active yet.",x+19,y+97,MUTED,false);
-        }else{
-            g.drawString(font,"Credits: "+menu.val(1)+" | Pending: "+menu.val(3),x+17,y+45,0xff9edfbc,false);
+        g.drawString(font,heading,x+19,y+20,TEXT,false);
+        if(activeView==1){
+            line(g,46,"EQUIPMENT SHOP","CR "+menu.val(1),GREEN);
+            g.drawString(font,"All items are delivered to your inventory.",x+20,y+197,DIM,false);
+        }else if(activeView==3){
+            line(g,60,"Owned Create trains",""+menu.val(22),GREEN);
+            line(g,82,"Parked at assigned station",""+menu.val(23),GREEN);
+            line(g,104,"Depot station found",menu.val(25)==1?"YES":"NOT SET",menu.val(25)==1?GREEN:RED);
+            line(g,192,"AUTO RETURN",menu.val(24)==1?"ENABLED":"DISABLED",menu.val(24)==1?GREEN:RED);
+        }else if(activeView==4){
+            line(g,64,"Nearby warehouse controllers",""+menu.val(26),GREEN);
+            line(g,87,"Items in connected warehouses",""+menu.val(27),GREEN);
+            g.drawString(font,"Use Create stock links and machines",x+21,y+123,DIM,false);
+            g.drawString(font,"for physical production and packaging.",x+21,y+139,DIM,false);
+            g.drawString(font,"Automatic production control: planned.",x+21,y+170,RED,false);
+        }else if(activeView==6){
+            line(g,64,"Source","COMPANY INFORMATION",GREEN);
+            line(g,87,"Current contracts",""+menu.val(3),GREEN);
+            g.drawString(font,"Create Display Link output is not wired",x+21,y+125,DIM,false);
+            g.drawString(font,"to this relay yet.",x+21,y+139,DIM,false);
+        }else if(activeView==7){
+            line(g,64,"Relay state","INSTALLED",GREEN);
+            g.drawString(font,"Use redstone to operate the warning",x+21,y+115,DIM,false);
+            g.drawString(font,"lights and mechanical barrier.",x+21,y+129,DIM,false);
+            g.drawString(font,"Train approach detection: planned.",x+21,y+170,RED,false);
+        }else if(activeView==0||activeView==2){
+            line(g,47,"CREDITS: "+menu.val(1),"OPEN ORDERS: "+menu.val(3),GREEN);
             for(int i=0;i<4;i++){
-                int id=menu.val(6+i*4),yy=y+65+i*25;
-                if(id==0){g.drawString(font,"-",x+18,yy,MUTED,false);continue;}
-                int itemId=menu.val(7+i*4),count=menu.val(8+i*4),reward=menu.val(9+i*4);
+                int id=menu.val(6+i*4);
+                int yy=64+i*27;
+                if(id==0){g.drawString(font,"No order",x+20,y+yy,DIM,false);continue;}
+                int itemId=menu.val(7+i*4);
                 String item=BuiltInRegistries.ITEM.byId(itemId).getDescription().getString();
-                if(item.length()>13)item=item.substring(0,13);
-                g.drawString(font,"#"+id+" "+item+" x"+count,x+17,yy,TEXT,false);
-                g.drawString(font,reward>=0?"+"+reward+"cr":reward==-1?"ASSIGNED":"DONE",x+17,yy+10,reward>0?0xff9edfbc:MUTED,false);
+                if(item.length()>21)item=item.substring(0,21);
+                g.drawString(font,"#"+id+" "+item,x+20,y+yy,TEXT,false);
+                int reward=menu.val(9+i*4);
+                g.drawString(font,menu.val(8+i*4)+" items  | "+
+                    (reward>=0?reward+" credits":reward==-1?"ASSIGNED":"COMPLETED"),
+                    x+20,y+yy+11,reward>=0?GREEN:DIM,false);
             }
-            g.drawString(font,"Page "+menu.val(2)+"/10",x+117,y+158,MUTED,false);
-            g.drawString(font,"Accept and deliver actual items for credits.",x+17,y+197,MUTED,false);
+            g.drawString(font,"PAGE "+menu.val(2)+" / 10",x+128,y+168,DIM,false);
         }
     }
-    @Override public void render(GuiGraphics graphics,int mx,int my,float ticks){
-        renderBackground(graphics,mx,my,ticks);
-        super.render(graphics,mx,my,ticks);
-        renderTooltip(graphics,mx,my);
+    @Override public void render(GuiGraphics g,int mx,int my,float delta){
+        renderBackground(g,mx,my,delta);
+        super.render(g,mx,my,delta);
+        renderTooltip(g,mx,my);
     }
 }
