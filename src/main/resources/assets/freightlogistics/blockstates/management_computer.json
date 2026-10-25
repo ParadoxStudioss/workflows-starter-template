@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "freightlogistics:block/management_computer"
+    },
+    "facing=east": {
+      "model": "freightlogistics:block/management_computer",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "freightlogistics:block/management_computer",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "freightlogistics:block/management_computer",
+      "y": 270
     }
   }
 }

@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "freightlogistics:block/depot_controller"
+    },
+    "facing=east": {
+      "model": "freightlogistics:block/depot_controller",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "freightlogistics:block/depot_controller",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "freightlogistics:block/depot_controller",
+      "y": 270
     }
   }
 }

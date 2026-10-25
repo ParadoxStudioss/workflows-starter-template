@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "freightlogistics:block/display_relay"
+    },
+    "facing=east": {
+      "model": "freightlogistics:block/display_relay",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "freightlogistics:block/display_relay",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "freightlogistics:block/display_relay",
+      "y": 270
     }
   }
 }

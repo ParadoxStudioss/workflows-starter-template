@@ -103,10 +103,20 @@ public final class FreightLogistics {
         NeoForge.EVENT_BUS.register(FreightCommands.class);
     }
 
-    public static class MachineBlock extends Block {
+    public static class MachineBlock extends net.minecraft.world.level.block.HorizontalDirectionalBlock {
         protected final String id;
         protected final String title;
-        public MachineBlock(Properties props,String id,String title){super(props);this.id=id;this.title=title;}
+        public MachineBlock(Properties props,String id,String title){super(props);this.id=id;this.title=title;registerDefaultState(stateDefinition.any().setValue(FACING,net.minecraft.core.Direction.NORTH));}
+        @Override protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<Block,BlockState> builder){builder.add(FACING);}
+        @Override public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext ctx){
+            return defaultBlockState().setValue(FACING,ctx.getHorizontalDirection().getOpposite());
+        }
+        @Override public BlockState rotate(BlockState state,net.minecraft.world.level.block.Rotation rotation){
+            return state.setValue(FACING,rotation.rotate(state.getValue(FACING)));
+        }
+        @Override public BlockState mirror(BlockState state,net.minecraft.world.level.block.Mirror mirror){
+            return state.rotate(mirror.getRotation(state.getValue(FACING)));
+        }
         @Override protected InteractionResult useWithoutItem(BlockState state,Level level,BlockPos pos,Player player,BlockHitResult hit){
             if(!level.isClientSide&&player instanceof ServerPlayer sp){
                 sp.openMenu(new SimpleMenuProvider((menuId,inventory,viewer)->

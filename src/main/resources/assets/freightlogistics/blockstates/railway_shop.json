@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "freightlogistics:block/railway_shop"
+    },
+    "facing=east": {
+      "model": "freightlogistics:block/railway_shop",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "freightlogistics:block/railway_shop",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "freightlogistics:block/railway_shop",
+      "y": 270
     }
   }
 }
