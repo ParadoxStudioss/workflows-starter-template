@@ -11,6 +11,9 @@ import site.paradoxstudios.freight.ManagementMenu;
 
 public final class ManagementScreen extends AbstractContainerScreen<ManagementMenu> {
     private static final int BG=0xff202a32, PANEL=0xff2e3d45, BORDER=0xffa17946, TEXT=0xffe9dec2, MUTED=0xffa3b5b9;
+    private final java.util.List<Button> shopButtons=new java.util.ArrayList<>();
+    private final java.util.List<Button> depotButtons=new java.util.ArrayList<>();
+    private final java.util.List<Button> orderButtons=new java.util.ArrayList<>();
     public ManagementScreen(ManagementMenu menu,Inventory inventory,Component title){
         super(menu,inventory,title);
         imageWidth=280;imageHeight=210;
@@ -19,24 +22,29 @@ public final class ManagementScreen extends AbstractContainerScreen<ManagementMe
     private void act(int id){
         if(Minecraft.getInstance().gameMode!=null)Minecraft.getInstance().gameMode.handleInventoryButtonClick(menu.containerId,id);
     }
-    private void button(int x,int y,int width,int height,String label,int id){
-        addRenderableWidget(Button.builder(Component.literal(label),b->act(id))
-            .bounds(leftPos+x,topPos+y,width,height).build());
+    private void button(int x,int y,int width,int height,String label,int id,java.util.List<Button> group){
+        Button btn=Button.builder(Component.literal(label),b->act(id))
+            .bounds(leftPos+x,topPos+y,width,height).build();
+        group.add(btn);addRenderableWidget(btn);
     }
     @Override protected void init(){
         super.init();
-        if(menu.view()==1){
-            String[] labels={"CPU 450","RAM 180","SSD 270","NETWORK 310","COOLING 140","MANIFEST 35","TRAIN VOUCHER 8500"};
-            for(int i=0;i<labels.length;i++)button(16+(i%2)*125,57+(i/2)*30,116,22,labels[i],30+i);
-        }else if(menu.view()==3){
-            button(25,127,226,25,"REGISTER CURRENT POSITION AS DEPOT",25);
-        }else{
-            button(17,170,46,23,"<<",10);button(219,170,46,23,">>",11);
-            for(int i=0;i<4;i++)button(207,62+i*25,57,18,"ACCEPT",20+i);
-            button(85,170,116,23,"DELIVER CARGO",24);
-        }
+        String[] labels={"CPU 450","RAM 180","SSD 270","NETWORK 310","COOLING 140","MANIFEST 35","TRAIN VOUCHER 8500"};
+        for(int i=0;i<labels.length;i++)button(16+(i%2)*125,57+(i/2)*30,116,22,labels[i],30+i,shopButtons);
+        button(25,127,226,25,"REGISTER CURRENT POSITION AS DEPOT",25,depotButtons);
+        button(17,170,46,23,"<<",10,orderButtons);
+        button(219,170,46,23,">>",11,orderButtons);
+        for(int i=0;i<4;i++)button(207,62+i*25,57,18,"ACCEPT",20+i,orderButtons);
+        button(85,170,116,23,"DELIVER CARGO",24,orderButtons);
+        updateVisibility();
+    }
+    private void updateVisibility(){
+        for(Button b:shopButtons)b.visible=menu.view()==1;
+        for(Button b:depotButtons)b.visible=menu.view()==3;
+        for(Button b:orderButtons)b.visible=menu.view()!=1&&menu.view()!=3;
     }
     @Override protected void renderBg(GuiGraphics g,float partialTick,int mouseX,int mouseY){
+        updateVisibility();
         int x=leftPos,y=topPos;
         g.fill(x,y,x+imageWidth,y+imageHeight,BORDER);
         g.fill(x+2,y+2,x+imageWidth-2,y+imageHeight-2,BG);
