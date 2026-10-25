@@ -117,3 +117,44 @@ for name in BLOCKS:
             "result":{"id":"freightlogistics:"+name,"count":1}
         })
 print("Generated",len(PARTS),"original item textures and",len(BLOCKS),"original block textures")
+
+# Generate small but valid NBT structure files for in-game Create/Ponder tutorials.
+# Each blueprint has a 5x5 baseplate and the featured mod block at 2,1,2.
+import gzip
+
+def _short(i): return struct.pack(">H",i)
+def _int(i): return struct.pack(">i",i)
+def _name(s):
+    b=s.encode("utf-8")
+    return _short(len(b))+b
+def _tag(kind,name,payload): return bytes([kind])+_name(name)+payload
+def _list(name,element_type,entries):
+    return _tag(9,name,bytes([element_type])+_int(len(entries))+b"".join(entries))
+def _int_list(name,values): return _list(name,3,[_int(v) for v in values])
+def _compound(name,items): return _tag(10,name,b"".join(items)+b"\x00")
+def _string(name,value): return _tag(8,name,_name(value))
+def ponder_blueprint(block_name):
+    palette=[_compound("",[_string("Name","minecraft:polished_andesite")]),
+             _compound("",[_string("Name","freightlogistics:"+block_name),
+                           _compound("Properties",[_string("facing","north")])])]
+    if block_name=="crossing_signal":
+        palette[1]=_compound("",[_string("Name","freightlogistics:crossing_signal"),
+                     _compound("Properties",[_string("powered","false")])])
+    blocks=[]
+    for x in range(5):
+        for z in range(5):
+            blocks.append(_compound("",[_int_list("pos",[x,0,z]),_tag(3,"state",_int(0))]))
+    blocks.append(_compound("",[_int_list("pos",[2,1,2]),_tag(3,"state",_int(1))]))
+    root=_compound("",[
+        _int_list("size",[5,3,5]),
+        _list("palette",10,[v[3:] for v in palette]),
+        _list("blocks",10,[b[3:] for b in blocks]),
+        _list("entities",10,[])
+    ])
+    path=ROOT/"assets/freightlogistics/ponder/guides"/(block_name+".nbt")
+    path.parent.mkdir(parents=True,exist_ok=True)
+    path.write_bytes(gzip.compress(root,mtime=0))
+for _id in ("management_computer","server_rack","depot_controller","warehouse_controller",
+            "railway_shop","factory_controller","crossing_signal"):
+    ponder_blueprint(_id)
+print("Generated seven built-in Ponder blueprints")
