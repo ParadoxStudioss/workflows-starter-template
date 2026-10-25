@@ -1,4 +1,4 @@
-name: Create Freight & Logistics (alpha)
+name: Create Freight & Logistics 0.1.2
 on:
   push:
     branches:
@@ -20,8 +20,38 @@ jobs:
           gradle-version: '8.14'
       - name: Build NeoForge mod
         run: gradle build --stacktrace --no-daemon
+      - name: Validate compiled jar resources
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile,glob,json
+          jars=glob.glob('build/libs/create-freight-logistics-*.jar')
+          assert len(jars)==1,jars
+          with zipfile.ZipFile(jars[0]) as z:
+              names=set(z.namelist())
+              required=[
+                  'META-INF/neoforge.mods.toml',
+                  'site/paradoxstudios/freight/FreightLogistics.class',
+                  'site/paradoxstudios/freight/RackBlockEntity.class',
+                  'site/paradoxstudios/freight/ManagementMenu.class',
+                  'site/paradoxstudios/freight/client/ManagementScreen.class',
+                  'site/paradoxstudios/freight/RailStopFeature.class',
+                  'assets/freightlogistics/models/block/server_rack.json',
+                  'assets/freightlogistics/models/block/crossing_barrier_closed.json',
+                  'assets/freightlogistics/lang/en_us.json',
+                  'data/freightlogistics/worldgen/configured_feature/railway_stop.json',
+                  'data/freightlogistics/worldgen/placed_feature/railway_stop.json',
+                  'data/freightlogistics/neoforge/biome_modifier/railway_stops.json'
+              ]
+              missing=[n for n in required if n not in names]
+              assert not missing,missing
+              for n in names:
+                  if n.endswith('.json') and (n.startswith('assets/freightlogistics/') or n.startswith('data/freightlogistics/')):
+                      json.loads(z.read(n))
+              print('Verified',jars[0],len(names),'files and JSON parsing')
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: create-freight-logistics-alpha
+          name: create-freight-logistics-0.1.2
           path: build/libs/*.jar
           if-no-files-found: error
