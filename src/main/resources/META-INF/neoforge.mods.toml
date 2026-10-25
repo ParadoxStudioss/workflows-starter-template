@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="freightlogistics"
+version="0.1.0-alpha"
+displayName="Create: Freight & Logistics"
+description='''A working first foundation for railway company economy, freight contracts, management blocks, depots and powered crossings.'''
+[[dependencies.freightlogistics]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.0,)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.freightlogistics]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.freightlogistics]]
+modId="create"
+type="required"
+versionRange="[6.0.10,6.1.0)"
+ordering="AFTER"
+side="BOTH"

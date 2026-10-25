@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IRI",
+    "RFR",
+    "III"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone",
+    "F": "minecraft:furnace"
+  },
+  "result": {
+    "id": "freightlogistics:factory_controller",
+    "count": 1
+  }
+}

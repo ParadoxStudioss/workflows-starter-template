@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "powered=false": {
+      "model": "freightlogistics:block/crossing_signal"
+    },
+    "powered=true": {
+      "model": "freightlogistics:block/crossing_signal_on"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "freightlogistics:block/freight_terminal"
+    }
+  }
+}

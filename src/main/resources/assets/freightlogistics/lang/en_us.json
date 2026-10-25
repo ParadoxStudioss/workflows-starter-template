@@ -1,0 +1,20 @@
+{
+  "block.freightlogistics.management_computer": "Railway Management Computer",
+  "block.freightlogistics.server_rack": "Industrial Server Rack",
+  "block.freightlogistics.factory_controller": "Factory Controller",
+  "block.freightlogistics.warehouse_controller": "Warehouse Controller",
+  "block.freightlogistics.depot_controller": "Depot Controller",
+  "block.freightlogistics.freight_terminal": "Freight Terminal",
+  "block.freightlogistics.display_relay": "Display Relay",
+  "block.freightlogistics.signal_controller": "Railway Signal Controller",
+  "block.freightlogistics.railway_shop": "Railway Marketplace Terminal",
+  "block.freightlogistics.crossing_signal": "Crossing Warning Signal",
+  "item.freightlogistics.freight_manifest": "Freight Manifest",
+  "item.freightlogistics.train_purchase_contract": "Train Purchase Contract",
+  "item.freightlogistics.industrial_cpu": "Industrial CPU",
+  "item.freightlogistics.memory_module": "Memory Module",
+  "item.freightlogistics.storage_drive": "Storage Drive",
+  "item.freightlogistics.network_card": "Network Card",
+  "item.freightlogistics.cooling_unit": "Cooling Unit",
+  "item.freightlogistics.railway_credit": "Railway Credit"
+}
