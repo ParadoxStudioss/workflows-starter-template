@@ -103,7 +103,8 @@ public final class FreightLogistics {
         NeoForge.EVENT_BUS.register(FreightCommands.class);
     }
 
-    public static class MachineBlock extends net.minecraft.world.level.block.HorizontalDirectionalBlock {
+    public static class MachineBlock extends Block {
+        public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING=net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING;
         protected final String id;
         protected final String title;
         public MachineBlock(Properties props,String id,String title){super(props);this.id=id;this.title=title;registerDefaultState(stateDefinition.any().setValue(FACING,net.minecraft.core.Direction.NORTH));}
