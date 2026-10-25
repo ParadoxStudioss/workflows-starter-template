@@ -39,6 +39,9 @@ public final class FreightLogistics {
     public static final DeferredRegister.Items ITEMS=DeferredRegister.createItems(ID);
     public static final DeferredRegister<CreativeModeTab> TABS=DeferredRegister.create(Registries.CREATIVE_MODE_TAB,ID);
     public static final DeferredRegister<MenuType<?>> MENUS=DeferredRegister.create(Registries.MENU,ID);
+    public static final DeferredRegister<net.minecraft.world.level.levelgen.feature.Feature<?>> FEATURES=DeferredRegister.create(Registries.FEATURE,ID);
+    public static final DeferredHolder<net.minecraft.world.level.levelgen.feature.Feature<?>,RailStopFeature> RAIL_STOP=
+        FEATURES.register("railway_stop",()->new RailStopFeature(net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration.CODEC));
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES=DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE,ID);
     public static final Map<String,DeferredBlock<Block>> MACHINES=new LinkedHashMap<>();
     public static final Map<String,DeferredItem<Item>> PARTS=new LinkedHashMap<>();
@@ -96,7 +99,7 @@ public final class FreightLogistics {
 
     public FreightLogistics(IEventBus bus){
         BLOCKS.register(bus);ITEMS.register(bus);TABS.register(bus);
-        MENUS.register(bus);BLOCK_ENTITIES.register(bus);
+        MENUS.register(bus);BLOCK_ENTITIES.register(bus);FEATURES.register(bus);
         NeoForge.EVENT_BUS.register(FreightCommands.class);
     }
 

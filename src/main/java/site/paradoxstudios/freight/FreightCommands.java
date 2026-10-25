@@ -41,6 +41,9 @@ public final class FreightCommands {
                 .then(Commands.literal("buy")
                     .then(Commands.argument("part",StringArgumentType.word())
                         .executes(c->buy(c.getSource(),StringArgumentType.getString(c,"part"))))))
+            .then(Commands.literal("railgen")
+                .requires(s->s.hasPermission(2))
+                .executes(c->railgen(c.getSource())))
             .then(Commands.literal("issue")
                 .requires(s->s.hasPermission(2))
                 .then(Commands.argument("item",StringArgumentType.word())
@@ -52,6 +55,17 @@ public final class FreightCommands {
                                 IntegerArgumentType.getInteger(c,"reward")))))))
         );
     }
+    private static int railgen(CommandSourceStack source){
+        ServerPlayer p=player(source);if(p==null)return 0;
+        BlockPosAtPosition loc=new BlockPosAtPosition(p.blockPosition().offset(0,0,2));
+        if(RailStopFeature.placeTrackStop(p.serverLevel(),loc.pos(),31,true)){
+            info(source,"§aBuilt a 31-block straight Create track test section. This is a manual test route.");
+            return 1;
+        }
+        source.sendFailure(Component.literal("Not enough clear space for railway test section."));
+        return 0;
+    }
+    private record BlockPosAtPosition(net.minecraft.core.BlockPos pos){}
     private static int help(CommandSourceStack source){
         info(source,"§6Freight & Logistics §7v0.1.2");
         info(source,"§e/freight company create <name> §7- create company");
@@ -61,6 +75,7 @@ public final class FreightCommands {
         info(source,"§e/freight deliver §7- submit real inventory items for your contract");
         info(source,"§e/freight depot set §7- set depot to current position");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
+        info(source,"§e/freight railgen §7- generate a test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");
         return 1;
     }

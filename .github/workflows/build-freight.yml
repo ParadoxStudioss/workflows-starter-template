@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - create-freight-logistics-prototype
+      - create-freight-logistics-v0.1.2
   workflow_dispatch:
 jobs:
   build:
