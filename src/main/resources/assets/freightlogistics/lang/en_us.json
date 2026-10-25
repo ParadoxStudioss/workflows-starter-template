@@ -46,5 +46,6 @@
   "freightlogistics.ponder.crossing.header": "Railway Crossing Signals",
   "freightlogistics.ponder.crossing.text_1": "Power the crossing signal with redstone to turn it on.",
   "freightlogistics.ponder.crossing.text_2": "Connect barriers and warning lamps to the same control line.",
-  "freightlogistics.ponder.crossing.text_3": "Train approach detection is not automatic in this version."
+  "freightlogistics.ponder.crossing.text_3": "Train approach detection is not automatic in this version.",
+  "freightlogistics.display_source.freight_info": "Freight & Logistics Data (Pages)"
 }

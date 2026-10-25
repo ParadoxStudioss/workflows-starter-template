@@ -38,6 +38,10 @@ public final class FreightLogistics {
     public static final DeferredRegister.Blocks BLOCKS=DeferredRegister.createBlocks(ID);
     public static final DeferredRegister.Items ITEMS=DeferredRegister.createItems(ID);
     public static final DeferredRegister<CreativeModeTab> TABS=DeferredRegister.create(Registries.CREATIVE_MODE_TAB,ID);
+    public static final DeferredRegister<com.simibubi.create.api.behaviour.display.DisplaySource> DISPLAY_SOURCES=
+        DeferredRegister.create(com.simibubi.create.api.registry.CreateRegistries.DISPLAY_SOURCE,ID);
+    public static final DeferredHolder<com.simibubi.create.api.behaviour.display.DisplaySource,FreightDisplaySource> FREIGHT_DISPLAY=
+        DISPLAY_SOURCES.register("freight_info",FreightDisplaySource::new);
     public static final DeferredRegister<MenuType<?>> MENUS=DeferredRegister.create(Registries.MENU,ID);
     public static final DeferredRegister<net.minecraft.world.level.levelgen.feature.Feature<?>> FEATURES=DeferredRegister.create(Registries.FEATURE,ID);
     public static final DeferredHolder<net.minecraft.world.level.levelgen.feature.Feature<?>,RailStopFeature> RAIL_STOP=
@@ -112,6 +116,14 @@ public final class FreightLogistics {
     public FreightLogistics(IEventBus bus){
         BLOCKS.register(bus);ITEMS.register(bus);TABS.register(bus);
         MENUS.register(bus);BLOCK_ENTITIES.register(bus);FEATURES.register(bus);
+        DISPLAY_SOURCES.register(bus);
+        bus.addListener((net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent event)->
+            event.enqueueWork(()->{
+                for(String id:new String[]{"management_computer","railway_shop","freight_terminal",
+                    "display_relay","depot_controller","factory_controller","warehouse_controller","server_rack"}){
+                    com.simibubi.create.api.behaviour.display.DisplaySource.BY_BLOCK.add(MACHINES.get(id).get(),FREIGHT_DISPLAY.get());
+                }
+            }));
         NeoForge.EVENT_BUS.register(FreightCommands.class);
         NeoForge.EVENT_BUS.register(DepotAutomation.class);
     }
