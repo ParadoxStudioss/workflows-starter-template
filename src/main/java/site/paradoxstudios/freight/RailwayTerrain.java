@@ -46,6 +46,11 @@ public final class RailwayTerrain {
         return h;
     }
 
+    /** World-generator surface without triggering neighboring chunk loads. */
+    public static int surface(ServerLevel level,int x,int z){
+        return base(level,x,z)-1;
+    }
+
     public static int height(ServerLevel level,int x,int z){
         // Avoid rescanning the same 256-point noise lattice for every
         // neighbouring tangent, block of ballast and returning chunk.
