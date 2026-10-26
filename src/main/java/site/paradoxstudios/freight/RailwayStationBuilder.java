@@ -21,24 +21,24 @@ import java.util.*;
  */
 public final class RailwayStationBuilder {
     private RailwayStationBuilder(){}
-    private static final Set<String> COMPLETE=new HashSet<>();
+    
 
     public static boolean build(ServerLevel level,RailwayNetworkGenerator.StationRequest req){
         BlockPos request=req.stationPos();
         int cx=request.getX(),cz=request.getZ()-5;
         String key=level.dimension().location()+":"+cx+":"+cz;
-        if(COMPLETE.contains(key))return true;
+        if(level.getBlockState(new BlockPos(cx,request.getY(),cz+5)).getBlock()==AllBlocks.TRACK_STATION.get())return true;
         int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
         // Plan ahead: all station width is in already loaded chunks.
         for(int x=cx-23;x<=cx+23;x+=8)
             for(int z=cz-9;z<=cz+17;z+=8)
                 if(!level.getChunkSource().hasChunk(x>>4,z>>4))return false;
         for(int x=cx-20;x<=cx+20;x+=4){
-            int y=RailwayTerrain.route(level,x,cz,spacing);
+            int y=RailwayTerrain.route(level,x,cz,spacing,true);
             if(level.getBlockState(new BlockPos(x,y,cz)).getBlock()!=TrackMaterial.ANDESITE.getBlock())
                 return false;
         }
-        int yCenter=RailwayTerrain.route(level,cx,cz,spacing);
+        int yCenter=RailwayTerrain.route(level,cx,cz,spacing,true);
         BlockPos stationPos=new BlockPos(cx,yCenter,cz+5);
         // A player's tile, door or unrelated construction must never be wiped.
         if(!RailwayNetworkGenerator.safe(level,stationPos))return false;
@@ -128,7 +128,6 @@ public final class RailwayStationBuilder {
             be.edgePoint.read(nbt,level.registryAccess(),false);
             be.setChanged();
         }
-        COMPLETE.add(key);
         return true;
     }
 }

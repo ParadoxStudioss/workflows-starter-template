@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 public final class RailwayCurveBuilder {
     private RailwayCurveBuilder(){}
     public static int makeJunction(ServerLevel level,int cx,int cz,int spacing){
-        int y=RailwayTerrain.route(level,cx,cz,spacing);
+        int y=RailwayTerrain.route(level,cx,cz,spacing,true);
         int finished=0;
         for(int east:new int[]{-1,1})for(int south:new int[]{-1,1}){
             BlockPos a=new BlockPos(cx+7*east,y,cz);

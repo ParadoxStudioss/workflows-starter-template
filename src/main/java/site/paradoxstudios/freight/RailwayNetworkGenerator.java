@@ -150,7 +150,7 @@ public final class RailwayNetworkGenerator {
         if(eastWest&&RailwayGenerationConfig.STATIONS.get()&&
             Math.floorMod(cp.x,spacing)==4){
             int x=trackX,z=trackZ;
-            int y=RailwayTerrain.route(level,x,z,dist);
+            int y=RailwayTerrain.route(level,x,z,dist,true);
             int rx=Math.floorDiv(x,dist),rz=Math.floorDiv(z,dist);
             requests.add(new StationRequest(new BlockPos(x,y,z+5),"Freight Valley "+rx+"-"+rz));
         }
@@ -160,14 +160,14 @@ public final class RailwayNetworkGenerator {
     private static Result blocked(){return new Result(true,false,true,0,0,List.of());}
 
     private static boolean railFor(ServerLevel level,List<Rail> planned,int x,int z,boolean horizontal,int spacing) {
-        int y=RailwayTerrain.route(level,x,z,spacing);
-        int prev=RailwayTerrain.route(level,horizontal?x-1:x,horizontal?z:z-1,spacing);
-        int next=RailwayTerrain.route(level,horizontal?x+1:x,horizontal?z:z+1,spacing);
+        int y=RailwayTerrain.route(level,x,z,spacing,horizontal);
+        int prev=RailwayTerrain.route(level,horizontal?x-1:x,horizontal?z:z-1,spacing,horizontal);
+        int next=RailwayTerrain.route(level,horizontal?x+1:x,horizontal?z:z+1,spacing,horizontal);
         if(Math.abs(y-prev)>1||Math.abs(y-next)>1)return false;
         TrackShape shape;
         if(horizontal)shape=(next>y)?TrackShape.AE:(prev>y?TrackShape.AW:TrackShape.XO);
         else shape=(next>y)?TrackShape.AS:(prev>y?TrackShape.AN:TrackShape.ZO);
-        int ground=level.getHeight(Heightmap.Types.OCEAN_FLOOR,x,z)-1;
+        int ground=level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,x,z)-1;
         planned.add(new Rail(new BlockPos(x,y,z),shape,horizontal?Direction.SOUTH:Direction.EAST,ground));
         return true;
     }

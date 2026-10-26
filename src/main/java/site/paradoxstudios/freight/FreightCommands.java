@@ -52,6 +52,12 @@ public final class FreightCommands {
                             .executes(c->railwayVerify(c.getSource(),
                                 IntegerArgumentType.getInteger(c,"x"),
                                 IntegerArgumentType.getInteger(c,"z"))))))
+                .then(Commands.literal("inspect")
+                    .then(Commands.argument("x",IntegerArgumentType.integer())
+                        .then(Commands.argument("z",IntegerArgumentType.integer())
+                            .executes(c->railwayInspect(c.getSource(),
+                                IntegerArgumentType.getInteger(c,"x"),
+                                IntegerArgumentType.getInteger(c,"z"))))))
                 .then(Commands.literal("locate").executes(c->railwayLocate(c.getSource())))
                 .then(Commands.literal("generate")
                     .requires(s->s.hasPermission(2))
@@ -87,9 +93,22 @@ public final class FreightCommands {
         info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
         return 1;
     }
+    private static int railwayInspect(CommandSourceStack source,int x,int z){
+        ServerLevel level=source.getLevel();
+        int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        boolean horizontal=Math.floorMod(z-8,spacing)==0;
+        int y=RailwayTerrain.route(level,x,z,spacing,horizontal);
+        BlockPos pos=new BlockPos(x,y,z);
+        info(source,"§6Railway terrain-height: "+y+" | block: "+
+            level.getBlockState(pos).getBlock().builtInRegistryHolder().key().location());
+        info(source,"§7Ground surface: "+(level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,x,z)-1));
+        return 1;
+    }
     private static int railwayVerify(CommandSourceStack source,int x,int z) {
         ServerLevel level=source.getLevel();
-        int y=RailwayGenerationConfig.ELEVATION.get();
+        int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        boolean horizontal=Math.floorMod(z-8,spacing)==0;
+        int y=RailwayTerrain.route(level,x,z,spacing,horizontal);
         // A section ending at x (usually a chunk border) and the next block
         // should lie in the SAME Create railway graph, not just look adjacent.
         var first=new net.minecraft.core.BlockPos(x,y,z);
@@ -113,9 +132,9 @@ public final class FreightCommands {
         int space=RailwayGenerationConfig.GRID_SPACING.get()*16;
         int centerX=8+(int)Math.round((player.getBlockX()-8-64)/(double)space)*space+64;
         int centerZ=8+(int)Math.round((player.getBlockZ()-8)/(double)space)*space;
-        info(source,"§aNearest planned station: §e"+centerX+", "+RailwayGenerationConfig.ELEVATION.get()+", "+centerZ);
+        info(source,"§aNearest planned station: §e"+centerX+", "+RailwayTerrain.route(player.serverLevel(),centerX,centerZ,space,true)+", "+centerZ);
         info(source,"§7Generated only when its chunk was NEW. For operator test use /tp "
-            +centerX+" "+(RailwayGenerationConfig.ELEVATION.get()+3)+" "+centerZ);
+            +centerX+" "+(RailwayTerrain.route(player.serverLevel(),centerX,centerZ,space,true)+3)+" "+centerZ);
         return 1;
     }
     private static int railwayGenerate(CommandSourceStack source){
@@ -156,6 +175,7 @@ public final class FreightCommands {
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
         info(source,"§e/freight railway status/locate §7- network overview");
         info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
+        info(source,"§e/freight railway inspect <x> <z> §7- planned terrain track height");
         info(source,"§e/freight railway generate §7- build planned rails in this chunk (operator)");
         info(source,"§e/freight railgen §7- old straight test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");

@@ -30,7 +30,7 @@ public final class RailwayTerrain {
         Integer known=cache.get(key);
         if(known!=null)return known;
         int h=level.getChunkSource().getGenerator().getBaseHeight(x,z,
-            Heightmap.Types.OCEAN_FLOOR_WG,level,level.getChunkSource().randomState());
+            Heightmap.Types.WORLD_SURFACE_WG,level,level.getChunkSource().randomState());
         h=Math.max(55,Math.min(210,h));
         cache.put(key,h);
         return h;
@@ -54,10 +54,10 @@ public final class RailwayTerrain {
     }
 
     /** Flatten the last eight blocks around each large railway interchange. */
-    public static int route(ServerLevel level,int x,int z,int lineSpacing){
+    public static int route(ServerLevel level,int x,int z,int lineSpacing,boolean horizontal){
         int nodeX=8+Math.floorDiv(x-8+lineSpacing/2,lineSpacing)*lineSpacing;
         int nodeZ=8+Math.floorDiv(z-8+lineSpacing/2,lineSpacing)*lineSpacing;
-        int distance=Math.min(Math.abs(x-nodeX),Math.abs(z-nodeZ));
+        int distance=horizontal?Math.abs(x-nodeX):Math.abs(z-nodeZ);
         if(distance>=24)return height(level,x,z);
         int joint=height(level,nodeX,nodeZ);
         if(distance<=8)return joint;
