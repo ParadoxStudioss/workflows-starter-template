@@ -20,7 +20,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
  */
 public final class RailwayGenerationService {
     private RailwayGenerationService(){}
-    private record Pending(ResourceKey<Level> dimension,ChunkPos pos,int attempts){}
+    private record Pending(ResourceKey<Level> dimension,ChunkPos pos,int attempts,boolean generate){}
     private record StationPending(ResourceKey<Level> dimension,BlockPos pos,String name,int attempts){}
     private static final ConcurrentLinkedQueue<Pending> PENDING=new ConcurrentLinkedQueue<>();
     private static final ArrayDeque<StationPending> STATIONS=new ArrayDeque<>();
@@ -28,14 +28,14 @@ public final class RailwayGenerationService {
     public static int builtChunks,blockedChunks,builtRails,builtStations,bridgeSegments,turnoutCurves;
 
     @SubscribeEvent public static void chunkLoaded(ChunkEvent.Load event){
-        if(!event.isNewChunk() || !RailwayGenerationConfig.ENABLED.get())return;
+        if(!RailwayGenerationConfig.ENABLED.get())return;
         if(!(event.getLevel() instanceof ServerLevel level) || level.dimension()!=Level.OVERWORLD)return;
         ChunkPos chunk=event.getChunk().getPos();
         if(!RailwayNetworkGenerator.relevant(chunk))return;
         String key=level.dimension().location()+":"+chunk.toLong();
         // Bounded to prevent massive background pre-generation from filling RAM.
         if(PENDING.size()>2048 || !QUEUED.add(key))return;
-        PENDING.add(new Pending(level.dimension(),chunk,0));
+        PENDING.add(new Pending(level.dimension(),chunk,0,event.isNewChunk()));
     }
     public static void enqueueStation(ServerLevel level,RailwayNetworkGenerator.StationRequest station){
         STATIONS.add(new StationPending(level.dimension(),station.stationPos(),station.name(),0));
@@ -51,13 +51,14 @@ public final class RailwayGenerationService {
             ServerLevel level=server.getLevel(job.dimension());
             if(level==null){QUEUED.remove(key);continue;}
             if(!level.getChunkSource().hasChunk(job.pos().x,job.pos().z)){
-                if(job.attempts()<100)PENDING.add(new Pending(job.dimension(),job.pos(),job.attempts()+1));
+                if(job.attempts()<100)PENDING.add(new Pending(job.dimension(),job.pos(),job.attempts()+1,job.generate()));
                 else QUEUED.remove(key);
                 continue;
             }
             try {
                 LevelChunk chunk=level.getChunk(job.pos().x,job.pos().z);
-                var result=RailwayNetworkGenerator.generate(level,chunk);
+                var result=job.generate()?RailwayNetworkGenerator.generate(level,chunk):
+                    new RailwayNetworkGenerator.Result(false,false,false,0,0,List.of());
                 if(result.built()){
                     builtChunks++;builtRails+=result.tracks();bridgeSegments+=result.supports();
                     if(Math.floorMod(job.pos().x,RailwayGenerationConfig.GRID_SPACING.get())==0 &&
@@ -72,6 +73,9 @@ public final class RailwayGenerationService {
                 if(result.blocked())blockedChunks++;
                 for(var s:result.stations())
                     STATIONS.add(new StationPending(job.dimension(),s.stationPos(),s.name(),0));
+                // A curve's endpoints may be generated or reloaded in a different
+                // order, so retry attachment whenever either endpoint loads.
+                turnoutCurves+=RailwayCurveBuilder.makeAlignmentConnections(level,job.pos());
             }catch(Exception ex){
                 FreightLogistics.LOGGER.error("Unable to build railway segment in {}",job.pos(),ex);
                 blockedChunks++;
