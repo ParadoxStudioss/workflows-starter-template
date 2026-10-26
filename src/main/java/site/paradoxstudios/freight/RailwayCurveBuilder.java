@@ -52,17 +52,18 @@ public final class RailwayCurveBuilder {
                         int aAlong=origin+pair[0],bAlong=origin+pair[1];
                         int aCross=line+RailwayAlignment.offsetAt(level.getSeed(),eastWest,aAlong,line,span);
                         int bCross=line+RailwayAlignment.offsetAt(level.getSeed(),eastWest,bAlong,line,span);
-                        BlockPos a=new BlockPos(eastWest?aAlong:aCross,
-                            RailwayTerrain.route(level,eastWest?aAlong:aCross,
-                                eastWest?aCross:aAlong,span,eastWest),
-                            eastWest?aCross:aAlong);
-                        BlockPos b=new BlockPos(eastWest?bAlong:bCross,
-                            RailwayTerrain.route(level,eastWest?bAlong:bCross,
-                                eastWest?bCross:bAlong,span,eastWest),
-                            eastWest?bCross:bAlong);
-                        boolean touches=(a.getX()>>4)==current.x&&(a.getZ()>>4)==current.z ||
-                                        (b.getX()>>4)==current.x&&(b.getZ()>>4)==current.z;
-                        if(touches&&connectAlignment(level,a,b,eastWest))made++;
+                        int ax=eastWest?aAlong:aCross,az=eastWest?aCross:aAlong;
+                        int bx=eastWest?bAlong:bCross,bz=eastWest?bCross:bAlong;
+                        // Cheap chunk-coordinate rejection BEFORE querying 256
+                        // base-height samples twice for the candidate curve.
+                        boolean touches=(ax>>4)==current.x&&(az>>4)==current.z ||
+                                        (bx>>4)==current.x&&(bz>>4)==current.z;
+                        if(!touches)continue;
+                        if(!level.getChunkSource().hasChunk(ax>>4,az>>4) ||
+                           !level.getChunkSource().hasChunk(bx>>4,bz>>4))continue;
+                        BlockPos a=new BlockPos(ax,RailwayTerrain.route(level,ax,az,span,eastWest),az);
+                        BlockPos b=new BlockPos(bx,RailwayTerrain.route(level,bx,bz,span,eastWest),bz);
+                        if(connectAlignment(level,a,b,eastWest))made++;
                     }
                 }
             }
