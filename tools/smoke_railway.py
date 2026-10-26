@@ -97,6 +97,15 @@ try:
         time.sleep(1)
     if not ready:raise AssertionError("Large Create Train Station was not generated: "+response)
     print("OK: terrain-level Create station installed",flush=True)
+    return_ok=False
+    for i in range(90):
+        time.sleep(1)
+        reply=connection.run(f"execute if block 72 {trackY} 3 create:track_station")
+        if "Test passed" in reply:
+            return_ok=True
+            break
+    if not return_ok:raise AssertionError("Missing reverse-facing station: "+reply)
+    print("OK: reverse-facing station exists",flush=True)
     response=connection.run(f"execute if block 72 {trackY-1} 11 minecraft:stone_bricks")
     if "Test passed" not in response:raise AssertionError("Station passenger platform missing: "+response)
     print("OK: larger passenger platform exists",flush=True)
