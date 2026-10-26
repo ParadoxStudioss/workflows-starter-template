@@ -27,7 +27,7 @@ public final class RailwayGenerationConfig {
         GRID_SPACING=builder.comment("Distance, in chunks, between main east-west and north-south lines.",
                 "24 chunks = 384 blocks. Stations appear every grid interval.")
             .defineInRange("line_spacing_chunks",24,12,128);
-        ELEVATION=builder.comment("Fixed track Y. A fixed Y keeps every chunk seam exactly aligned.",
+        ELEVATION=builder.comment("Legacy fixed track reference. Actual generated rails now follow terrain via a deterministic profile.",
                 "Above ground this becomes a viaduct; below ground it becomes a tunnel.")
             .defineInRange("rail_y",80,68,180);
         STATIONS=builder.comment("Build real Create station blocks and boarding platforms on east-west routes.")
