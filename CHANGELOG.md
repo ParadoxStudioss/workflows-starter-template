@@ -1,18 +1,19 @@
 # Changelog
 
-## 0.1.4 — Railway world-generation foundation
-- Replaced scattered, disconnected legacy stop injection with a deterministic
-  two-directional grid of genuine Create TrackShape rail blocks.
-- Mainline sections line up at chunk borders without forcing neighboring chunks.
-- Made a new-chunk-only deferred generation scheduler.
-- Added stone-brick viaduct supports and enclosed tunnels with train clearance.
-- Added actual Create Train Station blocks, platforms, canopies and station naming.
-- Added NeoForge server config for railway spacing, elevation, and infrastructure.
-- Added /freight railway status, locate and manual generation testing commands.
-- Added fresh-world dedicated-server CI smoke-testing workflow.
-- Kept mod's prior Create management/warehouse/depot/Ponder integrations.
+## 0.1.5 — Ground-hugging terrain generation and curved station networks
 
-### Still planned
-Terrain-adaptive grades, switchable curved junctions, village-aware routing,
-distributed locomotive services, full NPC company system, automatic freight
-loading/unloading, and long-distance dispatch.
+- Replaced universal Y=80 fixed viaduct lines with chunk-independent
+  worldgen-noise terrain profiles.
+- Uses sloped Create tracks for gradual elevations and a local grade guard.
+- Added gravel ballast, andesite shoulders and coarse-dirt track verges.
+- Bridge piers now appear only where rails are elevated above local ground.
+- Built 41-block-long graded, dual-sided stations with full roof,
+  passenger platforms, lanterns, benches and a timber station hall.
+- Added four real Create BezierConnection turnouts at every suitable hub.
+- Generated maintenance huts and wayside railway signaling equipment.
+- Added railway terrain inspection and junction diagnostics.
+- Strengthened physical Create graph and full station CI tests.
+- Kept existing economy, automation, device and Ponder integrations.
+
+**Still planned:** village-aware railway routes, smooth meandering mainlines,
+switchyard layouts with schedules and automatic freight services.
