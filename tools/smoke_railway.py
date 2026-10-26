@@ -122,6 +122,23 @@ try:
             print("OK: four real Create Bezier turnouts at interchange",flush=True)
             break
     if not present:raise AssertionError("Create junction has no functional Bezier connections: "+reply)
+    # A new 0.1.5.1-alpha feature: genuine connected S-bends, not an
+    # unbroken 384-block straight line. Test BOTH possible offset directions.
+    print("Loading both ends of the first terrain-following S-curve...",flush=True)
+    connection.run("forceload add 128 8")
+    connection.run("forceload add 192 -8")
+    connection.run("forceload add 192 24")
+    curveConnected=False
+    curveResult=""
+    for attempt in range(90):
+        time.sleep(1)
+        curveResult=connection.run("freight railway curve 128 8")
+        if "CONNECTED S-curve" in curveResult:
+            curveConnected=True
+            break
+    if not curveConnected:
+        raise AssertionError("Native 64-block Create S-curve is not connected: "+curveResult)
+    print("OK: native Create Bezier S-curve connected across distant chunks.",flush=True)
     roof=connection.run(f"execute if block 72 {trackY+6} 11 minecraft:cut_copper")
     if "Test passed" not in roof:raise AssertionError("Large station canopy missing: "+roof)
     print("OK: covered large passenger platform",flush=True)
