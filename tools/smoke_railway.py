@@ -24,7 +24,7 @@ def recv_exact(sock,n):
 class Rcon:
     def __init__(self):
         self.s=socket.create_connection(HOST,timeout=5)
-        self.s.settimeout(5)
+        self.s.settimeout(45)
         self.send(41,3,SECRET)
         result=self.receive()
         if result[0]!=41:
