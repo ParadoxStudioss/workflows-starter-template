@@ -144,6 +144,7 @@ public final class RailwayNetworkGenerator {
                 level.setBlock(p,placed,Block.UPDATE_ALL);count++;
             }
         }
+        RailwayWaysideBuilder.build(level,cp,eastWest,northSouth,spacing);
         List<StationRequest> requests=new ArrayList<>();
         // Stations are assembled by a separate service after neighboring
         // chunks are present: never cause implicit loads from a worldgen job.
