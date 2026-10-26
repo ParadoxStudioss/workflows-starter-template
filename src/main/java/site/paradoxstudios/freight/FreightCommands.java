@@ -118,7 +118,8 @@ public final class FreightCommands {
         if(!level.hasChunkAt(first)||!level.hasChunkAt(second)){
             source.sendFailure(Component.literal("Both candidate track chunks must be loaded."));return 0;
         }
-        var a=level.getBlockState(first),b=level.getBlockState(second);
+        var a=level.getBlockState(first);
+        var b=level.getBlockState(second);
         if(!(a.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock ta)||
            !(b.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock tb)) {
             source.sendFailure(Component.literal("Missing Create track blocks at these positions."));return 0;
