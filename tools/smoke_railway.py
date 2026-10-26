@@ -109,6 +109,22 @@ try:
         if "CONNECTED" in result:
             joined=True;print("OK: actual Create rail graph connects across chunks.",flush=True);break
     if not joined:raise AssertionError("Create track graphs did not connect: "+result)
+    # Four native Create Bezier paths are attached to the junction's
+    # west and east turnouts. Confirm the actual TrackBlockEntities hold them.
+    connection.run("forceload add 8 8")
+    present=False
+    for attempt in range(50):
+        time.sleep(1)
+        reply=connection.run("freight railway junction 8 8")
+        match=re.search(r"Bezier connections:\s*(\d+)",reply)
+        if match and int(match.group(1))>=4:
+            present=True
+            print("OK: four real Create Bezier turnouts at interchange",flush=True)
+            break
+    if not present:raise AssertionError("Create junction has no functional Bezier connections: "+reply)
+    roof=connection.run(f"execute if block 72 {trackY+6} 11 minecraft:dark_oak_slab")
+    if "Test passed" not in roof:raise AssertionError("Large station canopy missing: "+roof)
+    print("OK: covered large passenger platform",flush=True)
     text=LOG.read_text(errors="replace")
     if "Parsing error loading recipe freightlogistics:" in text:
         raise AssertionError("Invalid Freight & Logistics recipe was reported at runtime.")
