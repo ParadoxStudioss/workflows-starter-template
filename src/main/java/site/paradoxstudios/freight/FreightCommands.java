@@ -74,6 +74,9 @@ public final class FreightCommands {
                                 IntegerArgumentType.getInteger(c,"x"),
                                 IntegerArgumentType.getInteger(c,"z"))))))
                 .then(Commands.literal("locate").executes(c->railwayLocate(c.getSource())))
+                .then(Commands.literal("repair")
+                    .requires(s->s.hasPermission(2))
+                    .executes(c->railwayRepair(c.getSource())))
                 .then(Commands.literal("generate")
                     .requires(s->s.hasPermission(2))
                     .executes(c->railwayGenerate(c.getSource()))))
@@ -220,6 +223,26 @@ public final class FreightCommands {
             +centerX+" "+(RailwayTerrain.route(player.serverLevel(),centerX,centerZ,space,true)+3)+" "+centerZ);
         return 1;
     }
+    /** Rebuild natural corridor clearance in nearby loaded chunks only. */
+    private static int railwayRepair(CommandSourceStack source){
+        ServerLevel level=source.getLevel();
+        if(level.dimension()!=net.minecraft.world.level.Level.OVERWORLD){
+            source.sendFailure(Component.literal("Railway repair works in the Overworld only."));
+            return 0;
+        }
+        BlockPos here=BlockPos.containing(source.getPosition());
+        var center=new net.minecraft.world.level.ChunkPos(here);
+        int queued=0;
+        for(int dx=-2;dx<=2;dx++)
+            for(int dz=-2;dz<=2;dz++)
+                if(RailwayGenerationService.queueRepair(level,
+                    new net.minecraft.world.level.ChunkPos(center.x+dx,center.z+dz)))
+                    queued++;
+        info(source,"§6Railway repair: §a"+queued+
+            "§7 loaded railway chunks scheduled. Unloaded chunks were not touched.");
+        info(source,"§7Repairs reconstruct natural tunnel clearance and ballast without erasing protected builds.");
+        return queued>0?1:0;
+    }
     private static int railwayGenerate(CommandSourceStack source){
         ServerPlayer player=player(source);if(player==null)return 0;
         ServerLevel level=player.serverLevel();
@@ -257,6 +280,7 @@ public final class FreightCommands {
         info(source,"§e/freight depot set/return/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
         info(source,"§e/freight railway status/locate §7- network overview");
+        info(source,"§e/freight railway repair §7- repair loaded railway chunks near you");
         info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
         info(source,"§e/freight railway inspect <x> <z> §7- planned terrain track height");
         info(source,"§e/freight railway junction <x> <z> §7- genuine Create curved connections");
