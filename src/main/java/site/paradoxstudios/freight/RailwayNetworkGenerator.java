@@ -23,7 +23,10 @@ public final class RailwayNetworkGenerator {
                          int tracks,int supports,List<StationRequest> stations){}
     public static boolean relevant(ChunkPos chunk){
         int s=RailwayGenerationConfig.GRID_SPACING.get();
-        return Math.floorMod(chunk.x,s)==0||Math.floorMod(chunk.z,s)==0;
+        int x=Math.floorMod(chunk.x,s),z=Math.floorMod(chunk.z,s);
+        if(!RailwayAlignment.curved(s*16))return x==0||z==0;
+        // The mainline can enter either adjoining chunk while meandering.
+        return x==0||x==1||x==s-1||z==0||z==1||z==s-1;
     }
     private record Rail(BlockPos pos,TrackShape shape,Direction side,int ground){}
 
@@ -33,38 +36,45 @@ public final class RailwayNetworkGenerator {
         int dist=spacing*16;
         boolean eastWest=Math.floorMod(cp.z,spacing)==0;
         boolean northSouth=Math.floorMod(cp.x,spacing)==0;
-        if(!eastWest&&!northSouth)return new Result(false,false,false,0,0,List.of());
+        if(!relevant(cp))return new Result(false,false,false,0,0,List.of());
         int startX=cp.getMinBlockX(),startZ=cp.getMinBlockZ();
         int trackX=startX+8,trackZ=startZ+8;
         Block block=TrackMaterial.ANDESITE.getBlock();
-        List<Rail> plan=new ArrayList<>();
-        // Build independent railway geometries with the same 2-D altitude field.
-        // Lines meet at the same height in the shared intersection block.
-        for(int i=0;i<16;i++){
-            if(eastWest){
-                int x=startX+i,z=trackZ;
+        Map<BlockPos,Rail> plan=new LinkedHashMap<>();
+        long seed=level.getSeed();
+
+        // Both axes use the same globally derived alignment. A given chunk
+        // contributes whichever tangent happens to pass through its footprint;
+        // the 64-block meanders themselves are native Create Bezier tracks.
+        int baseZ=RailwayAlignment.line(startZ+8,dist);
+        for(int lane=-1;lane<=1;lane++){
+            int zLine=baseZ+lane*dist;
+            for(int i=0;i<16;i++){
+                int x=startX+i;
+                if(!RailwayAlignment.isTrackBlock(x,dist))continue;
+                int z=zLine+RailwayAlignment.offsetAt(seed,true,x,zLine,dist);
+                if(Math.floorDiv(z,16)!=cp.z)continue;
                 if(!railFor(level,plan,x,z,true,dist))return blocked();
             }
-            if(northSouth){
-                int x=trackX,z=startZ+i;
-                if(eastWest&&i==8)continue;
+        }
+        int baseX=RailwayAlignment.line(startX+8,dist);
+        for(int lane=-1;lane<=1;lane++){
+            int xLine=baseX+lane*dist;
+            for(int i=0;i<16;i++){
+                int z=startZ+i;
+                if(!RailwayAlignment.isTrackBlock(z,dist))continue;
+                int x=xLine+RailwayAlignment.offsetAt(seed,false,z,xLine,dist);
+                if(Math.floorDiv(x,16)!=cp.x)continue;
                 if(!railFor(level,plan,x,z,false,dist))return blocked();
             }
         }
-        // The intersection rail replaces the one horizontal rail with an
-        // orthogonal crossing, retaining one physical block.
-        if(eastWest&&northSouth) {
-            int index=8;
-            Rail existing=plan.get(index);
-            plan.set(index,new Rail(existing.pos,TrackShape.CR_O,existing.side,existing.ground));
-        }
         // Entire route is rejected if a protected building, block entity or
         // player's track occupies its 5-wide clearance. No half-build.
-        for(Rail r:plan){
+        for(Rail r:plan.values()){
             if(!safeCorridor(level,r.pos,r.side,block))return blocked();
         }
         int count=0,supports=0;
-        for(Rail r:plan){
+        for(Rail r:plan.values()){
             BlockPos p=r.pos;
             BlockState current=level.getBlockState(p);
             int ground=r.ground,railY=p.getY();
@@ -144,6 +154,8 @@ public final class RailwayNetworkGenerator {
                 level.setBlock(p,placed,Block.UPDATE_ALL);count++;
             }
         }
+        // Build only within the current chunk; never implicitly load a neighbor.
+        paveCurvedBeds(level,cp,dist);
         RailwayWaysideBuilder.build(level,cp,eastWest,northSouth,spacing);
         List<StationRequest> requests=new ArrayList<>();
         // Stations are assembled by a separate service after neighboring
@@ -160,17 +172,107 @@ public final class RailwayNetworkGenerator {
 
     private static Result blocked(){return new Result(true,false,true,0,0,List.of());}
 
-    private static boolean railFor(ServerLevel level,List<Rail> planned,int x,int z,boolean horizontal,int spacing) {
+    private static boolean railFor(ServerLevel level,Map<BlockPos,Rail> planned,int x,int z,boolean horizontal,int spacing) {
         int y=RailwayTerrain.route(level,x,z,spacing,horizontal);
+        int along=horizontal?x:z;
+        int p=RailwayAlignment.phase(along,spacing);
+        boolean anchor=RailwayAlignment.curved(spacing) &&
+            (p==RailwayAlignment.FIRST_START || p==RailwayAlignment.FIRST_END ||
+             p==RailwayAlignment.SECOND_START || p==RailwayAlignment.SECOND_END);
         int prev=RailwayTerrain.route(level,horizontal?x-1:x,horizontal?z:z-1,spacing,horizontal);
         int next=RailwayTerrain.route(level,horizontal?x+1:x,horizontal?z:z+1,spacing,horizontal);
-        if(Math.abs(y-prev)>1||Math.abs(y-next)>1)return false;
+        if(!anchor&&(Math.abs(y-prev)>1||Math.abs(y-next)>1))return false;
         TrackShape shape;
-        if(horizontal)shape=(next>y)?TrackShape.AE:(prev>y?TrackShape.AW:TrackShape.XO);
+        if(anchor)shape=horizontal?TrackShape.XO:TrackShape.ZO;
+        else if(horizontal)shape=(next>y)?TrackShape.AE:(prev>y?TrackShape.AW:TrackShape.XO);
         else shape=(next>y)?TrackShape.AS:(prev>y?TrackShape.AN:TrackShape.ZO);
         int ground=level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,x,z)-1;
-        planned.add(new Rail(new BlockPos(x,y,z),shape,horizontal?Direction.SOUTH:Direction.EAST,ground));
+        BlockPos point=new BlockPos(x,y,z);
+        Rail old=planned.get(point);
+        if(old!=null){
+            // The two tangents meet at the same node; do not replace one
+            // line with another or create two overlapping track blocks.
+            if(old.shape!=shape &&
+               ((old.shape==TrackShape.XO&&shape==TrackShape.ZO)||
+                (old.shape==TrackShape.ZO&&shape==TrackShape.XO))){
+                planned.put(point,new Rail(point,TrackShape.CR_O,old.side,ground));
+                return true;
+            }
+            return old.shape==shape || old.shape==TrackShape.CR_O;
+        }
+        planned.put(point,new Rail(point,shape,
+            horizontal?Direction.SOUTH:Direction.EAST,ground));
         return true;
+    }
+
+    /**
+     * Ballast under native Bezier arcs is prepared by every intersecting chunk.
+     * The actual Create connections are installed by RailwayCurveBuilder once
+     * both endpoint chunks have generated and loaded.
+     */
+    private static void paveCurvedBeds(ServerLevel level,ChunkPos cp,int span){
+        if(!RailwayAlignment.curved(span))return;
+        long seed=level.getSeed();
+        int bx=RailwayAlignment.line(cp.getMinBlockX()+8,span);
+        int bz=RailwayAlignment.line(cp.getMinBlockZ()+8,span);
+        for(boolean horizontal:new boolean[]{true,false}){
+            int start=horizontal?cp.getMinBlockX():cp.getMinBlockZ();
+            int nearestLine=horizontal?bz:bx;
+            for(int lane=-1;lane<=1;lane++){
+                int line=nearestLine+lane*span;
+                for(int i=0;i<16;i++){
+                    int along=start+i;
+                    if(!RailwayAlignment.onCurve(along,span))continue;
+                    int sideways=RailwayAlignment.lateralAt(seed,horizontal,along,line,span);
+                    int x=horizontal?along:sideways,z=horizontal?sideways:along;
+                    if(Math.floorDiv(x,16)!=cp.x||Math.floorDiv(z,16)!=cp.z)continue;
+                    int[] range=RailwayAlignment.curveRange(along,span);
+                    if(range==null)continue;
+                    int p0=range[0],p1=range[1];
+                    int lateral0=RailwayAlignment.lateralAt(seed,horizontal,p0,line,span);
+                    int lateral1=RailwayAlignment.lateralAt(seed,horizontal,p1,line,span);
+                    int y0=RailwayTerrain.route(level,horizontal?p0:lateral0,
+                        horizontal?lateral0:p0,span,horizontal);
+                    int y1=RailwayTerrain.route(level,horizontal?p1:lateral1,
+                        horizontal?lateral1:p1,span,horizontal);
+                    double t=(along-p0)/(double)(p1-p0);
+                    int y=(int)Math.round(y0+(y1-y0)*t);
+                    BlockPos center=new BlockPos(x,y,z);
+                    int ground=level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,x,z)-1;
+                    Direction side=horizontal?Direction.SOUTH:Direction.EAST;
+                    for(int k=-2;k<=2;k++){
+                        BlockPos bed=center.relative(side,k).below();
+                        if(Math.floorDiv(bed.getX(),16)!=cp.x ||
+                           Math.floorDiv(bed.getZ(),16)!=cp.z)continue;
+                        if(safe(level,bed)){
+                            BlockState material=k==0?Blocks.GRAVEL.defaultBlockState():
+                                Math.abs(k)==1?Blocks.ANDESITE.defaultBlockState():
+                                    Blocks.COARSE_DIRT.defaultBlockState();
+                            level.setBlock(bed,material,Block.UPDATE_ALL);
+                        }
+                        for(int dy=0;dy<=5;dy++){
+                            BlockPos clearance=center.relative(side,k).above(dy);
+                            if(RailwayNetworkGenerator.replaceableNatural(level.getBlockState(clearance)))
+                                level.setBlock(clearance,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                        }
+                    }
+                    if(y-ground>=2 && y-ground<=5){
+                        for(int d=2;d<=Math.min(6,y-ground+1);d++){
+                            BlockPos fill=center.below(d);
+                            if(safe(level,fill)&&level.getBlockState(fill).isAir())
+                                level.setBlock(fill,Blocks.GRAVEL.defaultBlockState(),Block.UPDATE_ALL);
+                        }
+                    }
+                    if(y-ground>5 && along%12==0){
+                        for(int yy=y-2;yy>Math.max(ground,y-24);yy--){
+                            BlockPos pillar=new BlockPos(x,yy,z);
+                            if(!safe(level,pillar))break;
+                            level.setBlock(pillar,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                        }
+                    }
+                }
+            }
+        }
     }
     private static boolean safeCorridor(ServerLevel level,BlockPos pos,Direction side,Block block){
         if(pos.getY()<level.getMinBuildHeight()+8||pos.getY()>level.getMaxBuildHeight()-10)return false;
