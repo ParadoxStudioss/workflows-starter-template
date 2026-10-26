@@ -61,12 +61,6 @@ public final class RailwayGenerationService {
                     new RailwayNetworkGenerator.Result(false,false,false,0,0,List.of());
                 if(result.built()){
                     builtChunks++;builtRails+=result.tracks();bridgeSegments+=result.supports();
-                    if(Math.floorMod(job.pos().x,RailwayGenerationConfig.GRID_SPACING.get())==0 &&
-                        Math.floorMod(job.pos().z,RailwayGenerationConfig.GRID_SPACING.get())==0){
-                        turnoutCurves+=RailwayCurveBuilder.makeJunction(level,
-                            job.pos().getMinBlockX()+8,job.pos().getMinBlockZ()+8,
-                            RailwayGenerationConfig.GRID_SPACING.get()*16);
-                    }
                     FreightLogistics.LOGGER.info("Generated railway segment in chunk {}: {} Create rails, {} supports, {} station(s)",
                         job.pos(),result.tracks(),result.supports(),result.stations().size());
                 }
@@ -76,6 +70,13 @@ public final class RailwayGenerationService {
                 // A curve's endpoints may be generated or reloaded in a different
                 // order, so retry attachment whenever either endpoint loads.
                 turnoutCurves+=RailwayCurveBuilder.makeAlignmentConnections(level,job.pos());
+                // A junction is native track geometry, not a one-time decoration.
+                // Reconcile its four links when an old hub chunk is loaded too.
+                if(Math.floorMod(job.pos().x,RailwayGenerationConfig.GRID_SPACING.get())==0 &&
+                   Math.floorMod(job.pos().z,RailwayGenerationConfig.GRID_SPACING.get())==0)
+                    turnoutCurves+=RailwayCurveBuilder.makeJunction(level,
+                        job.pos().getMinBlockX()+8,job.pos().getMinBlockZ()+8,
+                        RailwayGenerationConfig.GRID_SPACING.get()*16);
             }catch(Exception ex){
                 FreightLogistics.LOGGER.error("Unable to build railway segment in {}",job.pos(),ex);
                 blockedChunks++;
@@ -91,9 +92,11 @@ public final class RailwayGenerationService {
             if(station==null)break;
             ServerLevel level=server.getLevel(station.dimension());
             if(level==null||!level.hasChunkAt(station.pos()))continue;
-            if(RailwayStationBuilder.build(level,
-                new RailwayNetworkGenerator.StationRequest(station.pos(),station.name()))
-                && level.getBlockEntity(station.pos()) instanceof StationBlockEntity be){
+            var request=new RailwayNetworkGenerator.StationRequest(station.pos(),station.name());
+            boolean completed=station.name().endsWith(" Return")
+                ?RailwayStationBuilder.buildReturnStation(level,request)
+                :RailwayStationBuilder.build(level,request);
+            if(completed && level.getBlockEntity(station.pos()) instanceof StationBlockEntity be){
                 var global=be.getStation();
                 if(global==null && station.attempts()>3)
                     global=be.edgePoint.createEdgePoint();
