@@ -2,7 +2,7 @@ plugins {
     id 'java-library'
     id 'net.neoforged.moddev' version '2.0.148'
 }
-version = '0.1.5.1-alpha'
+version = '0.1.5.2-alpha'
 group = 'site.paradoxstudios'
 base { archivesName = 'create-freight-logistics' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
