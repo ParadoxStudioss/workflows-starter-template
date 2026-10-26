@@ -113,7 +113,7 @@ for name in BLOCKS:
         write_json(ROOT/"data/freightlogistics/recipe"/(name+".json"),{
             "type":"minecraft:crafting_shaped",
             "pattern":["IRI","RCR","III"],
-            "key":{"I":"minecraft:iron_ingot","R":"minecraft:redstone","C":"minecraft:comparator"},
+            "key":{"I":{"item":"minecraft:iron_ingot"},"R":{"item":"minecraft:redstone"},"C":{"item":"minecraft:comparator"}},
             "result":{"id":"freightlogistics:"+name,"count":1}
         })
 print("Generated",len(PARTS),"original item textures and",len(BLOCKS),"original block textures")
