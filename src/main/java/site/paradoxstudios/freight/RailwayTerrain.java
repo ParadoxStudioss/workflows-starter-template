@@ -58,10 +58,15 @@ public final class RailwayTerrain {
         int nodeX=8+Math.floorDiv(x-8+lineSpacing/2,lineSpacing)*lineSpacing;
         int nodeZ=8+Math.floorDiv(z-8+lineSpacing/2,lineSpacing)*lineSpacing;
         int distance=horizontal?Math.abs(x-nodeX):Math.abs(z-nodeZ);
-        if(distance>=24)return height(level,x,z);
         int joint=height(level,nodeX,nodeZ);
-        if(distance<=8)return joint;
+        // A ten-block tangent on both sides of each turnout stays perfectly
+        // horizontal. Beyond that, the grade's allowed departure from the
+        // junction increases by one block every five horizontal blocks.
+        // Unlike a finite blend, this never abruptly snaps to the natural
+        // terrain height when a hillside lies just outside the corner.
+        if(distance<=10)return joint;
         int natural=height(level,x,z);
-        return (int)Math.round(joint+(natural-joint)*(distance-8)/16.0);
+        int allowed=(distance-10)/5;
+        return Math.max(joint-allowed,Math.min(joint+allowed,natural));
     }
 }
