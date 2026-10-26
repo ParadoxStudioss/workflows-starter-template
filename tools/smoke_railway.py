@@ -122,7 +122,7 @@ try:
             print("OK: four real Create Bezier turnouts at interchange",flush=True)
             break
     if not present:raise AssertionError("Create junction has no functional Bezier connections: "+reply)
-    roof=connection.run(f"execute if block 72 {trackY+6} 11 minecraft:dark_oak_slab")
+    roof=connection.run(f"execute if block 72 {trackY+6} 11 minecraft:cut_copper")
     if "Test passed" not in roof:raise AssertionError("Large station canopy missing: "+roof)
     print("OK: covered large passenger platform",flush=True)
     text=LOG.read_text(errors="replace")
