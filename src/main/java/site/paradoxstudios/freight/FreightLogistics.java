@@ -35,6 +35,7 @@ import java.util.Map;
 @Mod(FreightLogistics.ID)
 public final class FreightLogistics {
     public static final String ID="freightlogistics";
+    public static final org.slf4j.Logger LOGGER=org.slf4j.LoggerFactory.getLogger("FreightLogistics");
     public static final DeferredRegister.Blocks BLOCKS=DeferredRegister.createBlocks(ID);
     public static final DeferredRegister.Items ITEMS=DeferredRegister.createItems(ID);
     public static final DeferredRegister<CreativeModeTab> TABS=DeferredRegister.create(Registries.CREATIVE_MODE_TAB,ID);
@@ -114,6 +115,8 @@ public final class FreightLogistics {
         }).build());
 
     public FreightLogistics(IEventBus bus){
+        net.neoforged.fml.ModLoadingContext.get().getActiveContainer().registerConfig(
+            net.neoforged.fml.config.ModConfig.Type.SERVER,RailwayGenerationConfig.SPEC,"freightlogistics-server.toml");
         BLOCKS.register(bus);ITEMS.register(bus);TABS.register(bus);
         MENUS.register(bus);BLOCK_ENTITIES.register(bus);FEATURES.register(bus);
         DISPLAY_SOURCES.register(bus);
@@ -127,6 +130,7 @@ public final class FreightLogistics {
         NeoForge.EVENT_BUS.register(FreightCommands.class);
         NeoForge.EVENT_BUS.register(DepotAutomation.class);
         NeoForge.EVENT_BUS.register(StationChunkLoading.class);
+        NeoForge.EVENT_BUS.register(RailwayGenerationService.class);
         bus.addListener((net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent e)->
             e.register(StationChunkLoading.TICKET));
     }
