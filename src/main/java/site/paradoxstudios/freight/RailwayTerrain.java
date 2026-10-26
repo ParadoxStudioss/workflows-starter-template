@@ -19,6 +19,16 @@ public final class RailwayTerrain {
     private RailwayTerrain(){}
     private static final int SAMPLE=32, RADIUS=7, MAX_CACHE=24000;
     private static final Map<ServerLevel,LinkedHashMap<Long,Integer>> CACHES=new WeakHashMap<>();
+    private static final int MAX_HEIGHT_CACHE=100000;
+    private static final Map<ServerLevel,LinkedHashMap<Long,Integer>> HEIGHT_CACHES=new WeakHashMap<>();
+
+    private static Map<Long,Integer> heightCache(ServerLevel level) {
+        return HEIGHT_CACHES.computeIfAbsent(level,l->new LinkedHashMap<>(8192,.75f,true){
+            @Override protected boolean removeEldestEntry(Map.Entry<Long,Integer> entry){
+                return size()>MAX_HEIGHT_CACHE;
+            }
+        });
+    }
 
     private static int base(ServerLevel level,int x,int z) {
         long key=net.minecraft.core.BlockPos.asLong(x,0,z);
@@ -37,6 +47,12 @@ public final class RailwayTerrain {
     }
 
     public static int height(ServerLevel level,int x,int z){
+        // Avoid rescanning the same 256-point noise lattice for every
+        // neighbouring tangent, block of ballast and returning chunk.
+        long cacheKey=net.minecraft.core.BlockPos.asLong(x,0,z);
+        Map<Long,Integer> finalHeights=heightCache(level);
+        Integer cached=finalHeights.get(cacheKey);
+        if(cached!=null)return cached;
         // Every query sees the same lattice points in world space, irrespective
         // of which chunk is being generated.
         int gx=Math.floorDiv(x,SAMPLE),gz=Math.floorDiv(z,SAMPLE);
@@ -49,8 +65,10 @@ public final class RailwayTerrain {
                 int candidate=base(level,xx,zz)+(dist+3)/4;
                 if(candidate<result)result=candidate;
             }
-        return Math.max(level.getMinBuildHeight()+8,
+        int graded=Math.max(level.getMinBuildHeight()+8,
             Math.min(level.getMaxBuildHeight()-12,result+1));
+        finalHeights.put(cacheKey,graded);
+        return graded;
     }
 
     /** Flatten the last eight blocks around each large railway interchange. */
