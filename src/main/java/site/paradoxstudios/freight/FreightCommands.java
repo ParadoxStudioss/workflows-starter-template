@@ -134,7 +134,24 @@ public final class FreightCommands {
             source.sendFailure(Component.literal("S-curve endpoints are MISSING their native Create connection."));
             return 0;
         }
-        info(source,"§aCONNECTED S-curve: bidirectional Create Bezier edges are present.");
+        var aState=level.getBlockState(a);
+        var bState=level.getBlockState(b);
+        if(!(aState.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock aTrack)
+            || !(bState.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock bTrack)){
+            source.sendFailure(Component.literal("Bezier endpoints are not both Create track blocks."));
+            return 0;
+        }
+        var ga=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
+            level,a,net.minecraft.core.Direction.AxisDirection.POSITIVE,
+            aTrack.getTrackAxes(level,a,aState).get(0));
+        var gb=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
+            level,b,net.minecraft.core.Direction.AxisDirection.POSITIVE,
+            bTrack.getTrackAxes(level,b,bState).get(0));
+        if(ga==null||gb==null||ga.graph!=gb.graph){
+            source.sendFailure(Component.literal("Bezier endpoints exist, but the Create railway graph is DISCONNECTED."));
+            return 0;
+        }
+        info(source,"§aCONNECTED S-curve: bidirectional Bezier edges AND the Create railway graph agree.");
         return 1;
     }
     private static int railwayJunction(CommandSourceStack source,int x,int z){
