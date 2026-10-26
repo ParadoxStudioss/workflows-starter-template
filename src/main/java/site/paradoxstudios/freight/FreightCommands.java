@@ -112,14 +112,19 @@ public final class FreightCommands {
         // A section ending at x (usually a chunk border) and the next block
         // should lie in the SAME Create railway graph, not just look adjacent.
         var first=new net.minecraft.core.BlockPos(x,y,z);
-        var second=first.east();
+        var second=first.east().atY(RailwayTerrain.route(level,x+1,z,spacing,horizontal));
         if(!level.hasChunkAt(first)||!level.hasChunkAt(second)){
             source.sendFailure(Component.literal("Both candidate track chunks must be loaded."));return 0;
         }
+        var a=level.getBlockState(first),b=level.getBlockState(second);
+        if(!(a.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock ta)||
+           !(b.getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock tb)) {
+            source.sendFailure(Component.literal("Missing Create track blocks at these positions."));return 0;
+        }
         var one=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
-            level,first,net.minecraft.core.Direction.AxisDirection.POSITIVE,new net.minecraft.world.phys.Vec3(1,0,0));
+            level,first,net.minecraft.core.Direction.AxisDirection.POSITIVE,ta.getTrackAxes(level,first,a).get(0));
         var two=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
-            level,second,net.minecraft.core.Direction.AxisDirection.POSITIVE,new net.minecraft.world.phys.Vec3(1,0,0));
+            level,second,net.minecraft.core.Direction.AxisDirection.POSITIVE,tb.getTrackAxes(level,second,b).get(0));
         if(one==null||two==null||one.graph!=two.graph){
             source.sendFailure(Component.literal("Rail graph DISCONNECTED at x="+x+"->"+(x+1)+", z="+z));
             return 0;

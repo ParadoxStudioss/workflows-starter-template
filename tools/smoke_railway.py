@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """End-to-end dedicated server generation probe; Python standard library only."""
 import os
+import re
 import socket
 import struct
 import subprocess
@@ -65,35 +66,49 @@ try:
     reply=connection.run("forceload add 72 8")
     print("Requested generation of station chunk:",reply,flush=True)
     # The scheduled chunk generation service may need several server ticks.
+    # Generation elevation now follows sampled ground instead of fixed Y=80.
+    # Force-load all 3x3 station chunks so its large platforms can be built.
+    connection.run("forceload add 48 -16 96 32")
+    def height_at(x,z):
+        response=connection.run(f"freight railway inspect {x} {z}")
+        m=re.search(r"terrain-height:\s*(\d+)",response)
+        if m is None:raise AssertionError("Cannot read planned track height: "+response)
+        return int(m.group(1))
+    trackY=height_at(72,8)
+    print("New terrain-aware mainline altitude at station:",trackY,flush=True)
     ready=False
-    for i in range(35):
+    for i in range(75):
         time.sleep(1)
-        r=connection.run("execute if block 72 80 8 create:track")
-        if "Test passed" in r or "test passed" in r.lower():
+        response=connection.run(f"execute if block 72 {trackY} 8 create:track")
+        if "Test passed" in response:
             ready=True
             break
-    if not ready:raise AssertionError("Create track at planned station coordinate was not generated; response: "+r)
-    checks=[
-        ("Create track at adjacent x=73", "execute if block 73 80 8 create:track"),
-        ("Real Create Train Station at z=13", "execute if block 72 80 13 create:track_station"),
-        ("Stone platform at z=11", "execute if block 72 79 11 minecraft:stone_bricks")
-    ]
-    for description,cmd in checks:
-        response=connection.run(cmd)
-        if "Test passed" not in response and "test passed" not in response.lower():
-            raise AssertionError(description+" failed: "+response)
-        print("OK:",description,flush=True)
-    print("Checking actual Create graph connectivity over the x=63 / x=64 chunk seam...",flush=True)
+    if not ready:raise AssertionError("Terrain Create rail was not generated at Y="+str(trackY)+": "+response)
+    print("OK: terrain-following Create rail exists at Y="+str(trackY),flush=True)
+    trackY2=height_at(73,8)
+    response=connection.run(f"execute if block 73 {trackY2} 8 create:track")
+    if "Test passed" not in response:raise AssertionError("Missing adjacent track: "+response)
+    print("OK: adjacent track is graded at Y="+str(trackY2),flush=True)
+    ready=False
+    for i in range(60):
+        response=connection.run(f"execute if block 72 {trackY} 13 create:track_station")
+        if "Test passed" in response:
+            ready=True;break
+        time.sleep(1)
+    if not ready:raise AssertionError("Large Create Train Station was not generated: "+response)
+    print("OK: terrain-level Create station installed",flush=True)
+    response=connection.run(f"execute if block 72 {trackY-1} 11 minecraft:stone_bricks")
+    if "Test passed" not in response:raise AssertionError("Station passenger platform missing: "+response)
+    print("OK: larger passenger platform exists",flush=True)
+    print("Checking actual Create railway graph across the x=63 / x=64 chunk seam...",flush=True)
     connection.run("forceload add 63 8")
     joined=False
-    for i in range(25):
+    for i in range(35):
         time.sleep(1)
         result=connection.run("freight railway verify 63 8")
         if "CONNECTED" in result:
-            joined=True
-            print("OK: Create graph is connected between neighboring chunks.",flush=True)
-            break
-    if not joined:raise AssertionError("Create graph did not join across chunk seam: "+result)
+            joined=True;print("OK: actual Create rail graph connects across chunks.",flush=True);break
+    if not joined:raise AssertionError("Create track graphs did not connect: "+result)
     text=LOG.read_text(errors="replace")
     if "Parsing error loading recipe freightlogistics:" in text:
         raise AssertionError("Invalid Freight & Logistics recipe was reported at runtime.")
