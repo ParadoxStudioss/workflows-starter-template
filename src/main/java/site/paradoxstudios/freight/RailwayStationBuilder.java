@@ -27,6 +27,40 @@ public final class RailwayStationBuilder {
         return !(level.getBlockState(pos).getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock)
             && RailwayNetworkGenerator.safe(level,pos);
     }
+    /**
+     * Separate approach station facing the other way on the SAME Create track
+     * graph. Scheduled trains can return along a single track without needing
+     * a destructive rail switch or an improvised mid-line 180-degree curve.
+     */
+    public static boolean buildReturnStation(ServerLevel level,RailwayNetworkGenerator.StationRequest req){
+        BlockPos request=req.stationPos();
+        int cx=request.getX(),cz=request.getZ()+5;
+        int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        int y=RailwayTerrain.route(level,cx,cz,spacing,true);
+        BlockPos outbound=new BlockPos(cx,y,cz+5);
+        BlockPos returnPos=new BlockPos(cx,y,cz-5);
+        if(!level.hasChunkAt(outbound)||!level.hasChunkAt(returnPos))
+            return false;
+        if(level.getBlockState(outbound).getBlock()!=AllBlocks.TRACK_STATION.get())
+            return false; // Build after the main platforms and outgoing station
+        if(level.getBlockState(new BlockPos(cx,y,cz)).getBlock()!=TrackMaterial.ANDESITE.getBlock())
+            return false;
+        if(level.getBlockState(returnPos).getBlock()==AllBlocks.TRACK_STATION.get())
+            return true;
+        if(!canDecorate(level,returnPos))return false;
+        level.setBlock(returnPos,AllBlocks.TRACK_STATION.getDefaultState(),Block.UPDATE_ALL);
+        if(level.getBlockEntity(returnPos) instanceof StationBlockEntity be){
+            CompoundTag nbt=new CompoundTag();
+            nbt.put("TargetTrack",NbtUtils.writeBlockPos(
+                new BlockPos(cx,y,cz).subtract(returnPos)));
+            nbt.putBoolean("TargetDirection",false);
+            be.edgePoint.read(nbt,level.registryAccess(),false);
+            be.setChanged();
+            return true;
+        }
+        return false;
+    }
+
     public static boolean build(ServerLevel level,RailwayNetworkGenerator.StationRequest req){
         BlockPos request=req.stationPos();
         int cx=request.getX(),cz=request.getZ()-5;
