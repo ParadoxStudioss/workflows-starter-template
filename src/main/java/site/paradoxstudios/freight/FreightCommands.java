@@ -87,8 +87,7 @@ public final class FreightCommands {
         return 1;
     }
     private static int railwayVerify(CommandSourceStack source,int x,int z) {
-        ServerPlayer p=player(source);if(p==null)return 0;
-        ServerLevel level=p.serverLevel();
+        ServerLevel level=source.getLevel();
         int y=RailwayGenerationConfig.ELEVATION.get();
         // A section ending at x (usually a chunk border) and the next block
         // should lie in the SAME Create railway graph, not just look adjacent.

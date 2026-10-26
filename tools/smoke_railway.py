@@ -83,6 +83,17 @@ try:
         if "Test passed" not in response and "test passed" not in response.lower():
             raise AssertionError(description+" failed: "+response)
         print("OK:",description,flush=True)
+    print("Checking actual Create graph connectivity over the x=63 / x=64 chunk seam...",flush=True)
+    connection.run("forceload add 63 8")
+    joined=False
+    for i in range(25):
+        time.sleep(1)
+        result=connection.run("freight railway verify 63 8")
+        if "CONNECTED" in result:
+            joined=True
+            print("OK: Create graph is connected between neighboring chunks.",flush=True)
+            break
+    if not joined:raise AssertionError("Create graph did not join across chunk seam: "+result)
     text=LOG.read_text(errors="replace")
     if "Parsing error loading recipe freightlogistics:" in text:
         raise AssertionError("Invalid Freight & Logistics recipe was reported at runtime.")
