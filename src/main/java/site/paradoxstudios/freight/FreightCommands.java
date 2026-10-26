@@ -54,6 +54,12 @@ public final class FreightCommands {
                             .executes(c->railwayVerify(c.getSource(),
                                 IntegerArgumentType.getInteger(c,"x"),
                                 IntegerArgumentType.getInteger(c,"z"))))))
+.then(Commands.literal("curve")
+                    .then(Commands.argument("x",IntegerArgumentType.integer())
+                        .then(Commands.argument("z",IntegerArgumentType.integer())
+                            .executes(c->railwayCurve(c.getSource(),
+                                IntegerArgumentType.getInteger(c,"x"),
+                                IntegerArgumentType.getInteger(c,"z"))))))
 .then(Commands.literal("junction")
                     .then(Commands.argument("x",IntegerArgumentType.integer())
                         .then(Commands.argument("z",IntegerArgumentType.integer())
@@ -96,9 +102,39 @@ public final class FreightCommands {
         info(source,"§7Built rail chunks: "+RailwayGenerationService.builtChunks+
             " | Tracks placed: "+RailwayGenerationService.builtRails+
             " | Active stations named: "+RailwayGenerationService.builtStations+
-            " | Curved junctions: "+RailwayGenerationService.turnoutCurves+
+            " | Create Bezier links: "+RailwayGenerationService.turnoutCurves+
             " | Obstructed chunks: "+RailwayGenerationService.blockedChunks);
         info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
+        return 1;
+    }
+    private static int railwayCurve(CommandSourceStack source,int x,int z){
+        ServerLevel level=source.getLevel();
+        int span=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        int[] range=RailwayAlignment.curveRange(x,span);
+        if(range==null){
+            source.sendFailure(Component.literal("There is no mainline S-curve at that X coordinate."));
+            return 0;
+        }
+        int line=RailwayAlignment.line(z,span);
+        int az=line+RailwayAlignment.offsetAt(level.getSeed(),true,range[0],line,span);
+        int bz=line+RailwayAlignment.offsetAt(level.getSeed(),true,range[1],line,span);
+        BlockPos a=new BlockPos(range[0],
+            RailwayTerrain.route(level,range[0],az,span,true),az);
+        BlockPos b=new BlockPos(range[1],
+            RailwayTerrain.route(level,range[1],bz,span,true),bz);
+        info(source,"§7S-curve endpoints: "+a.toShortString()+" -> "+b.toShortString());
+        if(!level.hasChunkAt(a)||!level.hasChunkAt(b)){
+            source.sendFailure(Component.literal("S-curve endpoints are not both loaded."));
+            return 0;
+        }
+        if(!(level.getBlockEntity(a) instanceof com.simibubi.create.content.trains.track.TrackBlockEntity one)
+            || !(level.getBlockEntity(b) instanceof com.simibubi.create.content.trains.track.TrackBlockEntity two)
+            || !one.getConnections().containsKey(b)
+            || !two.getConnections().containsKey(a)){
+            source.sendFailure(Component.literal("S-curve endpoints are MISSING their native Create connection."));
+            return 0;
+        }
+        info(source,"§aCONNECTED S-curve: bidirectional Create Bezier edges are present.");
         return 1;
     }
     private static int railwayJunction(CommandSourceStack source,int x,int z){
@@ -194,7 +230,7 @@ public final class FreightCommands {
     }
     private record BlockPosAtPosition(net.minecraft.core.BlockPos pos){}
     private static int help(CommandSourceStack source){
-        info(source,"§6Freight & Logistics §7v0.1.2");
+        info(source,"§6Freight & Logistics §7v0.1.5.1-alpha");
         info(source,"§e/freight company create <name> §7- create company");
         info(source,"§e/freight balance §7- company funds");
         info(source,"§e/freight contracts [1-10] §7- paginated contract list");
