@@ -69,6 +69,10 @@ public final class FreightCommands {
         info(source,"§7Enabled: "+RailwayGenerationConfig.ENABLED.get()+
             " | Grid: "+RailwayGenerationConfig.GRID_SPACING.get()*16+" blocks"+
             " | Track elevation: Y="+RailwayGenerationConfig.ELEVATION.get());
+        int graphs=com.simibubi.create.Create.RAILWAYS.trackNetworks.size();
+        int nodes=com.simibubi.create.Create.RAILWAYS.trackNetworks.values().stream()
+            .mapToInt(graph->graph.getNodes().size()).sum();
+        info(source,"§7Create railway graphs: "+graphs+" | Track nodes: "+nodes);
         info(source,"§7Built rail chunks: "+RailwayGenerationService.builtChunks+
             " | Tracks placed: "+RailwayGenerationService.builtRails+
             " | Active stations named: "+RailwayGenerationService.builtStations+

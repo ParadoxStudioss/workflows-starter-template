@@ -58,7 +58,11 @@ public final class RailwayGenerationService {
             try {
                 LevelChunk chunk=level.getChunk(job.pos().x,job.pos().z);
                 var result=RailwayNetworkGenerator.generate(level,chunk);
-                if(result.built()){builtChunks++;builtRails+=result.tracks();bridgeSegments+=result.supports();}
+                if(result.built()){
+                    builtChunks++;builtRails+=result.tracks();bridgeSegments+=result.supports();
+                    FreightLogistics.LOGGER.info("Generated railway segment in chunk {}: {} Create rails, {} supports, {} station(s)",
+                        job.pos(),result.tracks(),result.supports(),result.stations().size());
+                }
                 if(result.blocked())blockedChunks++;
                 for(var s:result.stations())
                     STATIONS.add(new StationPending(job.dimension(),s.stationPos(),s.name(),0));
