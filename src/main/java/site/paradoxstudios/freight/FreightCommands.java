@@ -40,6 +40,7 @@ public final class FreightCommands {
             .then(Commands.literal("deliver").executes(c->deliver(c.getSource())))
             .then(Commands.literal("depot")
                 .then(Commands.literal("set").executes(c->depot(c.getSource())))
+                .then(Commands.literal("return").executes(c->depotReturn(c.getSource())))
                 .then(Commands.literal("toggle").executes(c->toggleParking(c.getSource())))
                 .then(Commands.literal("status").executes(c->depotStatus(c.getSource()))))
             .then(Commands.literal("shop").executes(c->shop(c.getSource()))
@@ -253,7 +254,7 @@ public final class FreightCommands {
         info(source,"§e/freight contracts [1-10] §7- paginated contract list");
         info(source,"§e/freight accept <id> §7- accept available contract");
         info(source,"§e/freight deliver §7- submit real inventory items for your contract");
-        info(source,"§e/freight depot set/toggle/status §7- register a Create station and automate returns");
+        info(source,"§e/freight depot set/return/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
         info(source,"§e/freight railway status/locate §7- network overview");
         info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
@@ -371,12 +372,34 @@ public final class FreightCommands {
         info(source,"§6Automatic depot return: "+(co.autoParking?"§aENABLED":"§cDISABLED"));
         return 1;
     }
+    public static int depotReturn(CommandSourceStack source){
+        ServerPlayer player=player(source);
+        if(player==null)return 0;
+        FreightData.Company co=FreightData.get(source.getServer()).company(player.getUUID());
+        if(co==null||co.depotStation.isBlank()){
+            source.sendFailure(Component.literal("First register a Create station with /freight depot set."));
+            return 0;
+        }
+        DepotAutomation.ReturnReport result=DepotAutomation.requestReturn(
+            player.getUUID(),co.depotStation);
+        info(source,"§6Return to §e"+co.depotStation+"§7: dispatched §a"+
+            result.dispatched()+"§7; queued at next station §e"+result.queued()+
+            "§7; already home §a"+result.atDepot());
+        if(result.missingDriver()>0)
+            info(source,"§c"+result.missingDriver()+
+                " train(s) require a conductor and Train Controls at BOTH ends to reverse.");
+        if(result.queued()>0)
+            info(source,"§7Queued trains reverse at their next station stop; Create cannot safely reverse mid-line.");
+        return 1;
+    }
     public static int depotStatus(CommandSourceStack source){
         ServerPlayer p=player(source);if(p==null)return 0;
         FreightData.Company co=FreightData.get(source.getServer()).company(p.getUUID());
         if(co==null)return 0;
         info(source,"§6Depot: §e"+co.depotStation+" §7/ parking "+(co.autoParking?"§aON":"§cOFF"));
-        info(source,"§7Eligible Create-owned trains: "+DepotAutomation.ownedTrains(p.getUUID()));
+        info(source,"§7Eligible Create-owned trains: "+DepotAutomation.ownedTrains(p.getUUID())+
+            " | parked: "+DepotAutomation.parkedTrains(p.getUUID(),co.depotStation)+
+            " | requested return: "+DepotAutomation.queuedTrains(p.getUUID()));
         return 1;
     }
     private static final Map<String,Integer> SHOP=Map.of(
