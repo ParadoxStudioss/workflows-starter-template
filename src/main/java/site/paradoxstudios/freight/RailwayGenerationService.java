@@ -37,6 +37,9 @@ public final class RailwayGenerationService {
         if(PENDING.size()>2048 || !QUEUED.add(key))return;
         PENDING.add(new Pending(level.dimension(),chunk,0));
     }
+    public static void enqueueStation(ServerLevel level,RailwayNetworkGenerator.StationRequest station){
+        STATIONS.add(new StationPending(level.dimension(),station.stationPos(),station.name(),0));
+    }
     @SubscribeEvent public static void tick(ServerTickEvent.Post event){
         if(!RailwayGenerationConfig.ENABLED.get())return;
         MinecraftServer server=event.getServer();

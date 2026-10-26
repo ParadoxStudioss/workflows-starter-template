@@ -6,6 +6,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.*;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
@@ -97,9 +98,8 @@ public final class FreightCommands {
         }
         var r=RailwayNetworkGenerator.generate(level,level.getChunk(pos.x,pos.z));
         if(!r.built()){source.sendFailure(Component.literal("Generation skipped (protected terrain or track already built)."));return 0;}
-        info(source,"§aGenerated "+r.tracks()+" real Create tracks in this chunk.");
-        // A manually generated Create station still requires graph propagation
-        // after scheduled track updates; the service will finish it on chunk load.
+        for(var station:r.stations())RailwayGenerationService.enqueueStation(level,station);
+        info(source,"§aGenerated "+r.tracks()+" real Create tracks in this chunk; "+r.stations().size()+" station(s).");
         return 1;
     }
     private static int railgen(CommandSourceStack source){
