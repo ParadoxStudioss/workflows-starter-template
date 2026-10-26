@@ -8,6 +8,7 @@ import com.simibubi.create.content.trains.track.TrackShape;
 import net.createmod.catnip.data.Couple;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,6 +27,81 @@ public final class RailwayCurveBuilder {
         }
         return finished;
     }
+
+    /**
+     * Install the native Create edges spanning each 64-block S-curve.
+     * Can be called again when an old chunk loads: no duplicates, and no
+     * neighboring chunk is force-loaded by this operation.
+     */
+    public static int makeAlignmentConnections(ServerLevel level,ChunkPos current){
+        int span=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        if(!RailwayAlignment.curved(span))return 0;
+        int made=0;
+        for(boolean eastWest:new boolean[]{true,false}){
+            int along=eastWest?current.getMinBlockX():current.getMinBlockZ();
+            int cross=eastWest?current.getMinBlockZ():current.getMinBlockX();
+            int nearest=RailwayAlignment.line(cross+8,span);
+            int section=RailwayAlignment.section(along,span);
+            for(int segment=section-1;segment<=section+1;segment++){
+                int origin=8+segment*span;
+                for(int lane=-1;lane<=1;lane++){
+                    int line=nearest+lane*span;
+                    for(int[] pair:new int[][]{
+                        {RailwayAlignment.FIRST_START,RailwayAlignment.FIRST_END},
+                        {RailwayAlignment.SECOND_START,RailwayAlignment.SECOND_END}}){
+                        int aAlong=origin+pair[0],bAlong=origin+pair[1];
+                        int aCross=line+RailwayAlignment.offsetAt(level.getSeed(),eastWest,aAlong,line,span);
+                        int bCross=line+RailwayAlignment.offsetAt(level.getSeed(),eastWest,bAlong,line,span);
+                        BlockPos a=new BlockPos(eastWest?aAlong:aCross,
+                            RailwayTerrain.route(level,eastWest?aAlong:aCross,
+                                eastWest?aCross:aAlong,span,eastWest),
+                            eastWest?aCross:aAlong);
+                        BlockPos b=new BlockPos(eastWest?bAlong:bCross,
+                            RailwayTerrain.route(level,eastWest?bAlong:bCross,
+                                eastWest?bCross:bAlong,span,eastWest),
+                            eastWest?bCross:bAlong);
+                        boolean touches=(a.getX()>>4)==current.x&&(a.getZ()>>4)==current.z ||
+                                        (b.getX()>>4)==current.x&&(b.getZ()>>4)==current.z;
+                        if(touches&&connectAlignment(level,a,b,eastWest))made++;
+                    }
+                }
+            }
+        }
+        return made;
+    }
+
+    private static boolean connectAlignment(ServerLevel level,BlockPos a,BlockPos b,boolean eastWest){
+        if(!level.getChunkSource().hasChunk(a.getX()>>4,a.getZ()>>4) ||
+           !level.getChunkSource().hasChunk(b.getX()>>4,b.getZ()>>4))return false;
+        Block track=TrackMaterial.ANDESITE.getBlock();
+        BlockState firstState=level.getBlockState(a),secondState=level.getBlockState(b);
+        TrackShape expected=eastWest?TrackShape.XO:TrackShape.ZO;
+        if(firstState.getBlock()!=track||secondState.getBlock()!=track ||
+           firstState.getValue(TrackBlock.SHAPE)!=expected ||
+           secondState.getValue(TrackBlock.SHAPE)!=expected)return false;
+
+        if(!firstState.getValue(TrackBlock.HAS_BE))
+            level.setBlock(a,firstState.setValue(TrackBlock.HAS_BE,true),Block.UPDATE_ALL);
+        if(!secondState.getValue(TrackBlock.HAS_BE))
+            level.setBlock(b,secondState.setValue(TrackBlock.HAS_BE,true),Block.UPDATE_ALL);
+        if(!(level.getBlockEntity(a) instanceof TrackBlockEntity ta) ||
+           !(level.getBlockEntity(b) instanceof TrackBlockEntity tb))return false;
+        if(ta.getConnections().containsKey(b))return false;
+
+        Vec3 axisA=eastWest?new Vec3(1,0,0):new Vec3(0,0,1);
+        Vec3 axisB=axisA.scale(-1);
+        TrackBlock rail=(TrackBlock)track;
+        Vec3 start=rail.getCurveStart(level,a,level.getBlockState(a),axisA);
+        Vec3 finish=rail.getCurveStart(level,b,level.getBlockState(b),axisB);
+        BezierConnection connection=new BezierConnection(Couple.create(a,b),
+            Couple.create(start,finish),Couple.create(axisA,axisB),
+            Couple.create(new Vec3(0,1,0),new Vec3(0,1,0)),
+            true,false,TrackMaterial.ANDESITE);
+        ta.addConnection(connection);
+        tb.addConnection(connection.secondary());
+        return true;
+    }
+
     private static boolean curve(ServerLevel level,BlockPos a,BlockPos b,int east,int south){
         Block track=TrackMaterial.ANDESITE.getBlock();
         if(level.getBlockState(a).getBlock()!=track||level.getBlockState(b).getBlock()!=track)return false;
