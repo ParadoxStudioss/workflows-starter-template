@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.5.2-alpha — Mountain works, station reversing and depot return
+
+- Added a second, opposite-facing Create station at every generated mainline passenger stop. Both are targeted to the same continuous track and intended for two-ended train schedules.
+- Added `/freight depot return`: route owned trains home from a station, or queue a return for their next station stop if already moving. No unsafe instant reversing of moving trains.
+- Added `/freight railway repair` for operator-safe, loaded-only corridor and tunnel repairs around the player. Old chunks are never silently rewritten.
+- Added deep cutting walls, stone-lined tunnel approaches and curved-track mountain excavation with full usable clearance in processed chunks.
+- Replaced the oversized coarse-dirt bridge foundations with stone-and-ballast decks, reinforced pillars and masonry parapets.
+- Hardened cross-chunk track and terrain clearance to avoid implicit writes/loads outside the current chunk.
+- Re-runs native Create Bezier junction attachment when existing hub chunks load.
+- Preserved the network's existing 64-block meanders, regional connectivity, station halls, freight controllers and other 0.1.5.1-alpha systems.
+
+**Important:** reversing a Create schedule at a station requires a train assembled with Train Controls and conductors facing both directions. The alternative is an uninterrupted forward-only circuit with appropriate station placements; this version does not invent a physical balloon loop at every endpoint. The full world cannot be connected beyond unloaded/unvisited chunks, and protected player builds can stop a corridor until repaired manually.
+
+# Changelog
+
 ## 0.1.5.1-alpha — Winding mainlines and station expansion
 
 - Added seeded regional 64-block S-curves using native, reciprocal Create Bezier connections.
