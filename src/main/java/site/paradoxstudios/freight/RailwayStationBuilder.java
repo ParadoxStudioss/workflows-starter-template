@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
 /**
- * 41-long, twin-platform railway station with departure hall, covered platforms,
+ * 81-long, twin-platform railway station with departure hall, covered platforms,
  * columns, lamps, cargo shed, and a real Create train station connected to rail.
  *
  * The station is built only when all the required NEW track segments and their
@@ -34,10 +34,10 @@ public final class RailwayStationBuilder {
         if(level.getBlockState(new BlockPos(cx,request.getY(),cz+5)).getBlock()==AllBlocks.TRACK_STATION.get())return true;
         int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
         // Plan ahead: all station width is in already loaded chunks.
-        for(int x=cx-23;x<=cx+23;x+=8)
-            for(int z=cz-9;z<=cz+17;z+=8)
+        for(int x=cx-43;x<=cx+43;x+=8)
+            for(int z=cz-9;z<=cz+25;z+=8)
                 if(!level.getChunkSource().hasChunk(x>>4,z>>4))return false;
-        for(int x=cx-20;x<=cx+20;x+=4){
+        for(int x=cx-40;x<=cx+40;x+=4){
             int y=RailwayTerrain.route(level,x,cz,spacing,true);
             if(level.getBlockState(new BlockPos(x,y,cz)).getBlock()!=TrackMaterial.ANDESITE.getBlock())
                 return false;
@@ -47,8 +47,8 @@ public final class RailwayStationBuilder {
         // A player's tile, door or unrelated construction must never be wiped.
         if(!canDecorate(level,stationPos))return false;
 
-        // Both sides of the active railway get 41-block-long, graded platforms.
-        for(int dx=-20;dx<=20;dx++){
+        // Both sides of the active railway get 81-block-long, graded platforms.
+        for(int dx=-40;dx<=40;dx++){
             int x=cx+dx,y=RailwayTerrain.route(level,x,cz,spacing,true);
             for(int sign:new int[]{-1,1}){
                 for(int d=2;d<=7;d++){
@@ -84,7 +84,7 @@ public final class RailwayStationBuilder {
                             Blocks.DARK_OAK_SLAB.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
-            if(Math.abs(dx)<17&&dx%6==0){
+            if(Math.abs(dx)<36&&dx%6==0){
                 BlockPos bench=new BlockPos(x,y,cz+5);
                 if(canDecorate(level,bench))
                     level.setBlock(bench,Blocks.SPRUCE_STAIRS.defaultBlockState(),Block.UPDATE_ALL);
@@ -93,11 +93,19 @@ public final class RailwayStationBuilder {
         // A compact but complete wooden station building and freight office,
         // offset from the platform (never in the actual rail clearance).
         int baseY=yCenter;
-        for(int dx=-10;dx<=10;dx++)for(int dz=10;dz<=16;dz++){
+        for(int dx=-16;dx<=16;dx++)for(int dz=10;dz<=22;dz++){
             BlockPos floor=new BlockPos(cx+dx,baseY-1,cz+dz);
             if(canDecorate(level,floor))
                 level.setBlock(floor,Blocks.SPRUCE_PLANKS.defaultBlockState(),Block.UPDATE_ALL);
-            boolean border=dx==-10||dx==10||dz==10||dz==16;
+            if(Math.floorMod(dx,4)==0 && (dz==10 || dz==22)){
+                for(int drop=1;drop<=12;drop++){
+                    BlockPos support=floor.below(drop);
+                    if(!level.getBlockState(support).isAir())break;
+                    if(!canDecorate(level,support))break;
+                    level.setBlock(support,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                }
+            }
+            boolean border=dx==-16||dx==16||dz==10||dz==22;
             for(int dy=0;dy<=4;dy++){
                 BlockPos wall=floor.above(dy+1);
                 if(!canDecorate(level,wall))continue;
@@ -111,7 +119,7 @@ public final class RailwayStationBuilder {
             }
             BlockPos roof=floor.above(6);
             if(canDecorate(level,roof))
-                level.setBlock(roof,Math.abs(dx)==10?Blocks.CUT_COPPER.defaultBlockState():
+                level.setBlock(roof,Math.abs(dx)==16?Blocks.CUT_COPPER.defaultBlockState():
                     Blocks.SPRUCE_SLAB.defaultBlockState(),Block.UPDATE_ALL);
         }
         for(int dx=-2;dx<=2;dx++){
@@ -122,6 +130,12 @@ public final class RailwayStationBuilder {
                     level.setBlock(pos,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
             }
         }
+        // Freight reception desk inside the expanded departure hall. Skip
+        // existing block entities and leave circulation paths unobstructed.
+        BlockPos reception=new BlockPos(cx+12,baseY,cz+19);
+        if(canDecorate(level,reception))
+            level.setBlock(reception,FreightLogistics.MACHINES.get("freight_terminal").get()
+                .defaultBlockState(),Block.UPDATE_ALL);
         // Create station block remains a real track-targeting block entity.
         level.setBlock(stationPos,AllBlocks.TRACK_STATION.getDefaultState(),Block.UPDATE_ALL);
         if(level.getBlockEntity(stationPos) instanceof StationBlockEntity be){
