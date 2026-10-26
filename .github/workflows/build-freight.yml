@@ -44,6 +44,7 @@ jobs:
                   'site/paradoxstudios/freight/RailwayNetworkGenerator.class',
                   'site/paradoxstudios/freight/RailwayTerrain.class',
                   'site/paradoxstudios/freight/RailwayCurveBuilder.class',
+                  'site/paradoxstudios/freight/RailwayAlignment.class',
                   'site/paradoxstudios/freight/RailwayStationBuilder.class',
                   'site/paradoxstudios/freight/RailwayGenerationService.class',
                   'site/paradoxstudios/freight/RailwayGenerationConfig.class',
