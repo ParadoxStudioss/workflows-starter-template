@@ -43,6 +43,12 @@ public final class FreightCommands {
                 .then(Commands.literal("buy")
                     .then(Commands.argument("part",StringArgumentType.word())
                         .executes(c->buy(c.getSource(),StringArgumentType.getString(c,"part"))))))
+.then(Commands.literal("railway")
+                .then(Commands.literal("status").executes(c->railwayStatus(c.getSource())))
+                .then(Commands.literal("locate").executes(c->railwayLocate(c.getSource())))
+                .then(Commands.literal("generate")
+                    .requires(s->s.hasPermission(2))
+                    .executes(c->railwayGenerate(c.getSource()))))
             .then(Commands.literal("railgen")
                 .requires(s->s.hasPermission(2))
                 .executes(c->railgen(c.getSource())))
@@ -56,6 +62,45 @@ public final class FreightCommands {
                                 IntegerArgumentType.getInteger(c,"count"),
                                 IntegerArgumentType.getInteger(c,"reward")))))))
         );
+    }
+    private static int railwayStatus(CommandSourceStack source) {
+        info(source,"§6Freight Railway Generation §7- server settings");
+        info(source,"§7Enabled: "+RailwayGenerationConfig.ENABLED.get()+
+            " | Grid: "+RailwayGenerationConfig.GRID_SPACING.get()*16+" blocks"+
+            " | Track elevation: Y="+RailwayGenerationConfig.ELEVATION.get());
+        info(source,"§7Built rail chunks: "+RailwayGenerationService.builtChunks+
+            " | Tracks placed: "+RailwayGenerationService.builtRails+
+            " | Active stations named: "+RailwayGenerationService.builtStations+
+            " | Obstructed chunks: "+RailwayGenerationService.blockedChunks);
+        info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
+        return 1;
+    }
+    private static int railwayLocate(CommandSourceStack source){
+        ServerPlayer player=player(source);if(player==null)return 0;
+        int space=RailwayGenerationConfig.GRID_SPACING.get()*16;
+        int centerX=8+(int)Math.round((player.getBlockX()-8-64)/(double)space)*space+64;
+        int centerZ=8+(int)Math.round((player.getBlockZ()-8)/(double)space)*space;
+        info(source,"§aNearest planned station: §e"+centerX+", "+RailwayGenerationConfig.ELEVATION.get()+", "+centerZ);
+        info(source,"§7Generated only when its chunk was NEW. For operator test use /tp "
+            +centerX+" "+(RailwayGenerationConfig.ELEVATION.get()+3)+" "+centerZ);
+        return 1;
+    }
+    private static int railwayGenerate(CommandSourceStack source){
+        ServerPlayer player=player(source);if(player==null)return 0;
+        ServerLevel level=player.serverLevel();
+        if(level.dimension()!=net.minecraft.world.level.Level.OVERWORLD) {
+            source.sendFailure(Component.literal("Railway generation is Overworld-only."));return 0;
+        }
+        net.minecraft.world.level.ChunkPos pos=new net.minecraft.world.level.ChunkPos(player.blockPosition());
+        if(!RailwayNetworkGenerator.relevant(pos)){
+            source.sendFailure(Component.literal("No planned mainline in this chunk. Use /freight railway locate."));return 0;
+        }
+        var r=RailwayNetworkGenerator.generate(level,level.getChunk(pos.x,pos.z));
+        if(!r.built()){source.sendFailure(Component.literal("Generation skipped (protected terrain or track already built)."));return 0;}
+        info(source,"§aGenerated "+r.tracks()+" real Create tracks in this chunk.");
+        // A manually generated Create station still requires graph propagation
+        // after scheduled track updates; the service will finish it on chunk load.
+        return 1;
     }
     private static int railgen(CommandSourceStack source){
         ServerPlayer p=player(source);if(p==null)return 0;
@@ -77,7 +122,9 @@ public final class FreightCommands {
         info(source,"§e/freight deliver §7- submit real inventory items for your contract");
         info(source,"§e/freight depot set/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
-        info(source,"§e/freight railgen §7- generate a test track (operator)");
+        info(source,"§e/freight railway status/locate §7- network overview");
+        info(source,"§e/freight railway generate §7- build planned rails in this chunk (operator)");
+        info(source,"§e/freight railgen §7- old straight test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");
         return 1;
     }
