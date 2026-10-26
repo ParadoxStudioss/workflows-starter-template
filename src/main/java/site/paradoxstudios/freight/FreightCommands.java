@@ -54,6 +54,12 @@ public final class FreightCommands {
                             .executes(c->railwayVerify(c.getSource(),
                                 IntegerArgumentType.getInteger(c,"x"),
                                 IntegerArgumentType.getInteger(c,"z"))))))
+.then(Commands.literal("junction")
+                    .then(Commands.argument("x",IntegerArgumentType.integer())
+                        .then(Commands.argument("z",IntegerArgumentType.integer())
+                            .executes(c->railwayJunction(c.getSource(),
+                                IntegerArgumentType.getInteger(c,"x"),
+                                IntegerArgumentType.getInteger(c,"z"))))))
                 .then(Commands.literal("inspect")
                     .then(Commands.argument("x",IntegerArgumentType.integer())
                         .then(Commands.argument("z",IntegerArgumentType.integer())
@@ -94,6 +100,21 @@ public final class FreightCommands {
             " | Obstructed chunks: "+RailwayGenerationService.blockedChunks);
         info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
         return 1;
+    }
+    private static int railwayJunction(CommandSourceStack source,int x,int z){
+        ServerLevel level=source.getLevel();
+        int grade=RailwayTerrain.route(level,x,z,
+            RailwayGenerationConfig.GRID_SPACING.get()*16,true);
+        int connections=0;
+        for(int side:new int[]{-7,7}){
+            BlockPos anchor=new BlockPos(x+side,grade,z);
+            if(level.getBlockEntity(anchor) instanceof
+                com.simibubi.create.content.trains.track.TrackBlockEntity be)
+                connections+=be.getConnections().size();
+        }
+        info(source,"§6Create junction Bezier connections: "+connections+
+            " §7(expected four across the two x-direction anchors)");
+        return connections>=4?1:0;
     }
     private static int railwayInspect(CommandSourceStack source,int x,int z){
         ServerLevel level=source.getLevel();
@@ -184,6 +205,7 @@ public final class FreightCommands {
         info(source,"§e/freight railway status/locate §7- network overview");
         info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
         info(source,"§e/freight railway inspect <x> <z> §7- planned terrain track height");
+        info(source,"§e/freight railway junction <x> <z> §7- genuine Create curved connections");
         info(source,"§e/freight railway generate §7- build planned rails in this chunk (operator)");
         info(source,"§e/freight railgen §7- old straight test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");

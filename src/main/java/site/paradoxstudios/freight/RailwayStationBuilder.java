@@ -23,6 +23,10 @@ public final class RailwayStationBuilder {
     private RailwayStationBuilder(){}
     
 
+    private static boolean canDecorate(ServerLevel level,BlockPos pos){
+        return !(level.getBlockState(pos).getBlock() instanceof com.simibubi.create.content.trains.track.ITrackBlock)
+            && RailwayNetworkGenerator.safe(level,pos);
+    }
     public static boolean build(ServerLevel level,RailwayNetworkGenerator.StationRequest req){
         BlockPos request=req.stationPos();
         int cx=request.getX(),cz=request.getZ()-5;
@@ -41,7 +45,7 @@ public final class RailwayStationBuilder {
         int yCenter=RailwayTerrain.route(level,cx,cz,spacing,true);
         BlockPos stationPos=new BlockPos(cx,yCenter,cz+5);
         // A player's tile, door or unrelated construction must never be wiped.
-        if(!RailwayNetworkGenerator.safe(level,stationPos))return false;
+        if(!canDecorate(level,stationPos))return false;
 
         // Both sides of the active railway get 41-block-long, graded platforms.
         for(int dx=-20;dx<=20;dx++){
@@ -50,7 +54,7 @@ public final class RailwayStationBuilder {
                 for(int d=2;d<=7;d++){
                     int z=cz+sign*d;
                     BlockPos foundation=new BlockPos(x,y-1,z);
-                    if(RailwayNetworkGenerator.safe(level,foundation))level.setBlock(foundation,
+                    if(canDecorate(level,foundation))level.setBlock(foundation,
                         d==2?Blocks.SMOOTH_STONE.defaultBlockState():
                             d==7?Blocks.POLISHED_ANDESITE.defaultBlockState():
                                 Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
@@ -66,23 +70,23 @@ public final class RailwayStationBuilder {
                     BlockPos pillar=new BlockPos(x,y,cz+sign*7);
                     for(int dy=0;dy<=5;dy++){
                         BlockPos at=pillar.above(dy);
-                        if(RailwayNetworkGenerator.safe(level,at))
+                        if(canDecorate(level,at))
                             level.setBlock(at,Blocks.STRIPPED_DARK_OAK_LOG.defaultBlockState(),Block.UPDATE_ALL);
                     }
                     BlockPos lighting=pillar.offset(0,5,-sign);
-                    if(RailwayNetworkGenerator.safe(level,lighting))
+                    if(canDecorate(level,lighting))
                         level.setBlock(lighting,Blocks.SEA_LANTERN.defaultBlockState(),Block.UPDATE_ALL);
                 }
                 for(int d=2;d<=8;d++){
                     BlockPos roof=new BlockPos(x,y+6,cz+sign*d);
-                    if(RailwayNetworkGenerator.safe(level,roof))
+                    if(canDecorate(level,roof))
                         level.setBlock(roof,(dx%5==0)?Blocks.CUT_COPPER.defaultBlockState():
                             Blocks.DARK_OAK_SLAB.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
             if(Math.abs(dx)<17&&dx%6==0){
                 BlockPos bench=new BlockPos(x,y,cz+5);
-                if(RailwayNetworkGenerator.safe(level,bench))
+                if(canDecorate(level,bench))
                     level.setBlock(bench,Blocks.SPRUCE_STAIRS.defaultBlockState(),Block.UPDATE_ALL);
             }
         }
@@ -91,12 +95,12 @@ public final class RailwayStationBuilder {
         int baseY=yCenter;
         for(int dx=-10;dx<=10;dx++)for(int dz=10;dz<=16;dz++){
             BlockPos floor=new BlockPos(cx+dx,baseY-1,cz+dz);
-            if(RailwayNetworkGenerator.safe(level,floor))
+            if(canDecorate(level,floor))
                 level.setBlock(floor,Blocks.SPRUCE_PLANKS.defaultBlockState(),Block.UPDATE_ALL);
             boolean border=dx==-10||dx==10||dz==10||dz==16;
             for(int dy=0;dy<=4;dy++){
                 BlockPos wall=floor.above(dy+1);
-                if(!RailwayNetworkGenerator.safe(level,wall))continue;
+                if(!canDecorate(level,wall))continue;
                 if(border) {
                     boolean window=dy==2&&dx%5==0;
                     level.setBlock(wall,window?Blocks.GLASS_PANE.defaultBlockState():
@@ -106,7 +110,7 @@ public final class RailwayStationBuilder {
                     level.setBlock(wall,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
             }
             BlockPos roof=floor.above(6);
-            if(RailwayNetworkGenerator.safe(level,roof))
+            if(canDecorate(level,roof))
                 level.setBlock(roof,Math.abs(dx)==10?Blocks.CUT_COPPER.defaultBlockState():
                     Blocks.SPRUCE_SLAB.defaultBlockState(),Block.UPDATE_ALL);
         }
@@ -114,7 +118,7 @@ public final class RailwayStationBuilder {
             BlockPos door=new BlockPos(cx+dx,baseY,cz+10);
             for(int dy=0;dy<3;dy++){
                 BlockPos pos=door.above(dy);
-                if(RailwayNetworkGenerator.safe(level,pos))
+                if(canDecorate(level,pos))
                     level.setBlock(pos,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
             }
         }
