@@ -37,6 +37,17 @@ public final class RailwayGenerationService {
         if(PENDING.size()>2048 || !QUEUED.add(key))return;
         PENDING.add(new Pending(level.dimension(),chunk,0,event.isNewChunk()));
     }
+    /** Explicit operator repair of already-loaded rail-bearing chunks only. */
+    public static boolean queueRepair(ServerLevel level,ChunkPos chunk){
+        if(level.dimension()!=Level.OVERWORLD || !RailwayGenerationConfig.ENABLED.get() ||
+            !RailwayNetworkGenerator.relevant(chunk) ||
+            !level.getChunkSource().hasChunk(chunk.x,chunk.z))return false;
+        String key=level.dimension().location()+":"+chunk.toLong();
+        if(PENDING.size()>2048||!QUEUED.add(key))return false;
+        PENDING.add(new Pending(level.dimension(),chunk,0,true));
+        return true;
+    }
+
     public static void enqueueStation(ServerLevel level,RailwayNetworkGenerator.StationRequest station){
         STATIONS.add(new StationPending(level.dimension(),station.stationPos(),station.name(),0));
     }
