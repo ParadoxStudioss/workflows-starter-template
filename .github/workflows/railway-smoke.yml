@@ -4,6 +4,7 @@ on:
     branches:
       - create-freight-logistics-v0.1.4-generation
       - create-freight-logistics-v0.1.5-terrain
+      - create-freight-logistics-v0.1.5.1-alpha
   workflow_dispatch:
 jobs:
   fresh-world:
