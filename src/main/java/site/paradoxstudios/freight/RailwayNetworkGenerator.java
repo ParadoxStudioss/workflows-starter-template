@@ -71,7 +71,7 @@ public final class RailwayNetworkGenerator {
         // Entire route is rejected if a protected building, block entity or
         // player's track occupies its 5-wide clearance. No half-build.
         for(Rail r:plan.values()){
-            if(!safeCorridor(level,r.pos,r.side,block))return blocked();
+            if(!safeCorridor(level,r.pos,r.side,block,r.shape))return blocked();
         }
         int count=0,supports=0;
         for(Rail r:plan.values()){
@@ -90,6 +90,7 @@ public final class RailwayNetworkGenerator {
                 for(int dy=0;dy<=5;dy++){
                     BlockPos clear=along.above(dy);
                     if(clear.equals(p))continue;
+                    if(!withinChunk(cp,clear))continue;
                     BlockState old=level.getBlockState(clear);
                     if(replaceableNatural(old))level.setBlock(clear,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
                 }
@@ -103,10 +104,11 @@ public final class RailwayNetworkGenerator {
                 BlockState wanted=side==0?Blocks.GRAVEL.defaultBlockState():
                     Math.abs(side)==1?Blocks.ANDESITE.defaultBlockState():
                     Blocks.COARSE_DIRT.defaultBlockState();
-                if(safe(level,bed))level.setBlock(bed,wanted,Block.UPDATE_ALL);
+                if(withinChunk(cp,bed)&&safe(level,bed))
+                    level.setBlock(bed,wanted,Block.UPDATE_ALL);
                 if(Math.abs(side)==2&&delta<=3){
                     BlockPos shoulder=bed.below();
-                    if(safe(level,shoulder)&&level.getBlockState(shoulder).isAir())
+                    if(withinChunk(cp,shoulder)&&safe(level,shoulder)&&level.getBlockState(shoulder).isAir())
                         level.setBlock(shoulder,Blocks.DIRT.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
@@ -129,14 +131,14 @@ public final class RailwayNetworkGenerator {
                 }
                 for(int side:new int[]{-2,2}){
                     BlockPos fence=p.relative(r.side,side);
-                    if(level.getBlockState(fence).isAir())
+                    if(withinChunk(cp,fence)&&level.getBlockState(fence).isAir())
                         level.setBlock(fence,Blocks.IRON_BARS.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
             if(tunnel){
                 for(int side=-3;side<=3;side++){
                     BlockPos top=p.relative(r.side,side).above(6);
-                    if(safe(level,top))
+                    if(withinChunk(cp,top)&&safe(level,top))
                         level.setBlock(top,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                 }
                 // Do not obstruct the junction or the parallel station platform.
@@ -144,7 +146,7 @@ public final class RailwayNetworkGenerator {
                 if(!nearNode)for(int side:new int[]{-3,3}){
                     for(int dy=0;dy<=5;dy++){
                         BlockPos wall=p.relative(r.side,side).above(dy);
-                        if(safe(level,wall))
+                        if(withinChunk(cp,wall)&&safe(level,wall))
                             level.setBlock(wall,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                     }
                 }
@@ -168,6 +170,10 @@ public final class RailwayNetworkGenerator {
             requests.add(new StationRequest(new BlockPos(x,y,z+5),"Freight Valley "+rx+"-"+rz));
         }
         return new Result(true,count>0,false,count,supports,requests);
+    }
+
+    private static boolean withinChunk(ChunkPos cp,BlockPos pos){
+        return (pos.getX()>>4)==cp.x && (pos.getZ()>>4)==cp.z;
     }
 
     private static Result blocked(){return new Result(true,false,true,0,0,List.of());}
@@ -274,10 +280,13 @@ public final class RailwayNetworkGenerator {
             }
         }
     }
-    private static boolean safeCorridor(ServerLevel level,BlockPos pos,Direction side,Block block){
+    private static boolean safeCorridor(ServerLevel level,BlockPos pos,Direction side,Block block,TrackShape wanted){
         if(pos.getY()<level.getMinBuildHeight()+8||pos.getY()>level.getMaxBuildHeight()-10)return false;
         BlockState track=level.getBlockState(pos);
-        if(track.getBlock()!=block&&!safe(level,pos))return false;
+        if(track.getBlock()==block){
+            if(!track.hasProperty(TrackBlock.SHAPE)||track.getValue(TrackBlock.SHAPE)!=wanted)
+                return false;
+        } else if(!safe(level,pos))return false;
         for(int k=-2;k<=2;k++)for(int dy=1;dy<=5;dy++){
             if(!safe(level,pos.relative(side,k).above(dy)))return false;
         }
@@ -291,7 +300,9 @@ public final class RailwayNetworkGenerator {
             s.is(BlockTags.RAILS)||s.is(BlockTags.SIGNS)||s.is(BlockTags.FENCES)||
             s.is(BlockTags.PLANKS)||s.is(Blocks.CHEST)||s.is(Blocks.BARREL)||
             s.is(Blocks.IRON_BLOCK))return false;
-        if(s.getBlock() instanceof TrackBlock)return true;
+        // Existing Create rails are not natural terrain. Do not repurpose
+        // player-built tracks as a ballast foundation or tunnel wall.
+        if(s.getBlock() instanceof TrackBlock)return false;
         return replaceableNatural(s);
     }
     static boolean replaceableNatural(BlockState s){
