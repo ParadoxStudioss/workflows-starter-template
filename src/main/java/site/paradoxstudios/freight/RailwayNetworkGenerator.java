@@ -81,6 +81,7 @@ public final class RailwayNetworkGenerator {
             int delta=railY-ground;
             boolean bridge=delta>4;
             boolean tunnel=delta< -3;
+            boolean cutting=delta<=-1;
             if(bridge&&!RailwayGenerationConfig.BRIDGES.get())return blocked();
             if(tunnel&&!RailwayGenerationConfig.TUNNELS.get())return blocked();
 
@@ -101,12 +102,16 @@ public final class RailwayNetworkGenerator {
             // of 40-block-tall viaduct columns.
             for(int side=-2;side<=2;side++){
                 BlockPos bed=p.relative(r.side,side).below();
-                BlockState wanted=side==0?Blocks.GRAVEL.defaultBlockState():
-                    Math.abs(side)==1?Blocks.ANDESITE.defaultBlockState():
-                    Blocks.COARSE_DIRT.defaultBlockState();
+                // Stone/ballast instead of long suspended brown dirt carpets.
+                BlockState wanted=bridge?(
+                    Math.abs(side)==2?Blocks.POLISHED_ANDESITE.defaultBlockState():
+                        Blocks.STONE_BRICKS.defaultBlockState()):
+                    side==0?Blocks.GRAVEL.defaultBlockState():
+                    Math.abs(side)==1?Blocks.TUFF.defaultBlockState():
+                        Blocks.ANDESITE.defaultBlockState();
                 if(withinChunk(cp,bed)&&safe(level,bed))
                     level.setBlock(bed,wanted,Block.UPDATE_ALL);
-                if(Math.abs(side)==2&&delta<=3){
+                if(Math.abs(side)==2&&delta<=3&&!cutting){
                     BlockPos shoulder=bed.below();
                     if(withinChunk(cp,shoulder)&&safe(level,shoulder)&&level.getBlockState(shoulder).isAir())
                         level.setBlock(shoulder,Blocks.DIRT.defaultBlockState(),Block.UPDATE_ALL);
@@ -121,6 +126,17 @@ public final class RailwayNetworkGenerator {
                         level.setBlock(fill,Blocks.GRAVEL.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
+            // A deep cutting needs reinforced wing walls, rather than a
+            // portal that ends abruptly at a natural hillside.
+            if(cutting&&!tunnel){
+                for(int k:new int[]{-3,3}){
+                    for(int dy=0;dy<Math.min(4,Math.max(1,-delta));dy++){
+                        BlockPos wall=p.relative(r.side,k).above(dy);
+                        if(withinChunk(cp,wall)&&safe(level,wall))
+                            level.setBlock(wall,Blocks.COBBLED_DEEPSLATE.defaultBlockState(),Block.UPDATE_ALL);
+                    }
+                }
+            }
             if(bridge && Math.floorMod((r.side==Direction.SOUTH?p.getX():p.getZ()),12)==0){
                 int bottom=Math.max(ground+1,railY-22);
                 for(int y=railY-2;y>=bottom;y--){
@@ -129,17 +145,38 @@ public final class RailwayNetworkGenerator {
                     level.setBlock(pillar,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                     supports++;
                 }
+            }
+            if(bridge){
                 for(int side:new int[]{-2,2}){
-                    BlockPos fence=p.relative(r.side,side);
-                    if(withinChunk(cp,fence)&&level.getBlockState(fence).isAir())
-                        level.setBlock(fence,Blocks.IRON_BARS.defaultBlockState(),Block.UPDATE_ALL);
+                    BlockPos parapet=p.relative(r.side,side);
+                    if(withinChunk(cp,parapet)&&level.getBlockState(parapet).isAir())
+                        level.setBlock(parapet,Blocks.STONE_BRICK_WALL.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
             if(tunnel){
                 for(int side=-3;side<=3;side++){
                     BlockPos top=p.relative(r.side,side).above(6);
                     if(withinChunk(cp,top)&&safe(level,top))
-                        level.setBlock(top,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                        level.setBlock(top,Math.abs(side)==3?Blocks.POLISHED_DEEPSLATE.defaultBlockState():
+                            Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                }
+                // Portal lintels and voussoirs at transitions between actual
+                // terrain cover and open air, tested using the local base
+                // terrain height rather than an unloaded adjacent chunk.
+                int prevX=r.side==Direction.SOUTH?p.getX()-1:p.getX();
+                int prevZ=r.side==Direction.EAST?p.getZ()-1:p.getZ();
+                int nextX=r.side==Direction.SOUTH?p.getX()+1:p.getX();
+                int nextZ=r.side==Direction.EAST?p.getZ()+1:p.getZ();
+                int previousCover=RailwayTerrain.surface(level,prevX,prevZ)-railY;
+                int followingCover=RailwayTerrain.surface(level,nextX,nextZ)-railY;
+                if(previousCover<3||followingCover<3){
+                    for(int k=-4;k<=4;k++){
+                        BlockPos lintel=p.relative(r.side,k).above(7);
+                        if(withinChunk(cp,lintel)&&safe(level,lintel))
+                            level.setBlock(lintel,Math.abs(k)>=3?
+                                Blocks.POLISHED_DEEPSLATE.defaultBlockState():
+                                Blocks.DEEPSLATE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                    }
                 }
                 // Do not obstruct the junction or the parallel station platform.
                 boolean nearNode=eastWest&&northSouth&&Math.abs(p.getX()-trackX)<=9&&Math.abs(p.getZ()-trackZ)<=9;
@@ -167,7 +204,9 @@ public final class RailwayNetworkGenerator {
             int x=trackX,z=trackZ;
             int y=RailwayTerrain.route(level,x,z,dist,true);
             int rx=Math.floorDiv(x,dist),rz=Math.floorDiv(z,dist);
-            requests.add(new StationRequest(new BlockPos(x,y,z+5),"Freight Valley "+rx+"-"+rz));
+            String name="Freight Valley "+rx+"-"+rz;
+            requests.add(new StationRequest(new BlockPos(x,y,z+5),name));
+            requests.add(new StationRequest(new BlockPos(x,y,z-5),name+" Return"));
         }
         return new Result(true,count>0,false,count,supports,requests);
     }
@@ -252,14 +291,37 @@ public final class RailwayNetworkGenerator {
                            Math.floorDiv(bed.getZ(),16)!=cp.z)continue;
                         if(safe(level,bed)){
                             BlockState material=k==0?Blocks.GRAVEL.defaultBlockState():
-                                Math.abs(k)==1?Blocks.ANDESITE.defaultBlockState():
-                                    Blocks.COARSE_DIRT.defaultBlockState();
+                                Math.abs(k)==1?Blocks.TUFF.defaultBlockState():
+                                    Blocks.ANDESITE.defaultBlockState();
                             level.setBlock(bed,material,Block.UPDATE_ALL);
                         }
                         for(int dy=0;dy<=5;dy++){
                             BlockPos clearance=center.relative(side,k).above(dy);
                             if(RailwayNetworkGenerator.replaceableNatural(level.getBlockState(clearance)))
                                 level.setBlock(clearance,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                        }
+                    }
+                    // A curved span can cross a mountain too: clear the
+                    // actual arc trajectory in this loaded chunk, rather than
+                    // leaving solid stone behind a decorative tunnel portal.
+                    if(ground-y>3){
+                        for(int dy=0;dy<=5;dy++)
+                            for(int k=-2;k<=2;k++){
+                                BlockPos air=center.relative(side,k).above(dy);
+                                if(withinChunk(cp,air)&&replaceableNatural(level.getBlockState(air)))
+                                    level.setBlock(air,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                            }
+                        for(int k:new int[]{-3,3}){
+                            for(int dy=0;dy<=5;dy++){
+                                BlockPos wall=center.relative(side,k).above(dy);
+                                if(withinChunk(cp,wall)&&safe(level,wall))
+                                    level.setBlock(wall,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                            }
+                        }
+                        for(int k=-3;k<=3;k++){
+                            BlockPos ceiling=center.relative(side,k).above(6);
+                            if(withinChunk(cp,ceiling)&&safe(level,ceiling))
+                                level.setBlock(ceiling,Blocks.DEEPSLATE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                         }
                     }
                     if(y-ground>=2 && y-ground<=5){
@@ -305,6 +367,9 @@ public final class RailwayNetworkGenerator {
         if(s.getBlock() instanceof TrackBlock)return false;
         return replaceableNatural(s);
     }
+    /** Natural terrain test used for gradual tunnel portal transitions. */
+    private static boolean isNatural(BlockState s){return replaceableNatural(s);}
+
     static boolean replaceableNatural(BlockState s){
         if(s.isAir())return true;
         if(s.is(BlockTags.LOGS)||s.is(BlockTags.LEAVES)||s.is(BlockTags.FLOWERS))return true;
