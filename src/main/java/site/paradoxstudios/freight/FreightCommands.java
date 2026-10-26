@@ -74,7 +74,7 @@ public final class FreightCommands {
         info(source,"§6Freight Railway Generation §7- server settings");
         info(source,"§7Enabled: "+RailwayGenerationConfig.ENABLED.get()+
             " | Grid: "+RailwayGenerationConfig.GRID_SPACING.get()*16+" blocks"+
-            " | Track elevation: Y="+RailwayGenerationConfig.ELEVATION.get());
+            " | Elevation: TERRAIN-FOLLOWING");
         int graphs=com.simibubi.create.Create.RAILWAYS.trackNetworks.size();
         int nodes=com.simibubi.create.Create.RAILWAYS.trackNetworks.values().stream()
             .mapToInt(graph->graph.getNodes().size()).sum();
@@ -82,6 +82,7 @@ public final class FreightCommands {
         info(source,"§7Built rail chunks: "+RailwayGenerationService.builtChunks+
             " | Tracks placed: "+RailwayGenerationService.builtRails+
             " | Active stations named: "+RailwayGenerationService.builtStations+
+            " | Curved junctions: "+RailwayGenerationService.turnoutCurves+
             " | Obstructed chunks: "+RailwayGenerationService.blockedChunks);
         info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
         return 1;

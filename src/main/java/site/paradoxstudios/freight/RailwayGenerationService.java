@@ -25,7 +25,7 @@ public final class RailwayGenerationService {
     private static final ConcurrentLinkedQueue<Pending> PENDING=new ConcurrentLinkedQueue<>();
     private static final ArrayDeque<StationPending> STATIONS=new ArrayDeque<>();
     private static final Set<String> QUEUED=Collections.synchronizedSet(new HashSet<>());
-    public static int builtChunks,blockedChunks,builtRails,builtStations,bridgeSegments;
+    public static int builtChunks,blockedChunks,builtRails,builtStations,bridgeSegments,turnoutCurves;
 
     @SubscribeEvent public static void chunkLoaded(ChunkEvent.Load event){
         if(!event.isNewChunk() || !RailwayGenerationConfig.ENABLED.get())return;
@@ -60,6 +60,12 @@ public final class RailwayGenerationService {
                 var result=RailwayNetworkGenerator.generate(level,chunk);
                 if(result.built()){
                     builtChunks++;builtRails+=result.tracks();bridgeSegments+=result.supports();
+                    if(Math.floorMod(job.pos().x,RailwayGenerationConfig.GRID_SPACING.get())==0 &&
+                        Math.floorMod(job.pos().z,RailwayGenerationConfig.GRID_SPACING.get())==0){
+                        turnoutCurves+=RailwayCurveBuilder.makeJunction(level,
+                            job.pos().getMinBlockX()+8,job.pos().getMinBlockZ()+8,
+                            RailwayGenerationConfig.GRID_SPACING.get()*16);
+                    }
                     FreightLogistics.LOGGER.info("Generated railway segment in chunk {}: {} Create rails, {} supports, {} station(s)",
                         job.pos(),result.tracks(),result.supports(),result.stations().size());
                 }
@@ -81,7 +87,9 @@ public final class RailwayGenerationService {
             if(station==null)break;
             ServerLevel level=server.getLevel(station.dimension());
             if(level==null||!level.hasChunkAt(station.pos()))continue;
-            if(level.getBlockEntity(station.pos()) instanceof StationBlockEntity be){
+            if(RailwayStationBuilder.build(level,
+                new RailwayNetworkGenerator.StationRequest(station.pos(),station.name()))
+                && level.getBlockEntity(station.pos()) instanceof StationBlockEntity be){
                 var global=be.getStation();
                 if(global==null && station.attempts()>3)
                     global=be.edgePoint.createEdgePoint();
@@ -92,7 +100,7 @@ public final class RailwayGenerationService {
                     continue;
                 }
             }
-            if(station.attempts()<80)
+            if(station.attempts()<800)
                 STATIONS.add(new StationPending(station.dimension(),station.pos(),station.name(),station.attempts()+1));
         }
     }
