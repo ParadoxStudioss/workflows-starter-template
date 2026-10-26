@@ -6,6 +6,7 @@ on:
       - create-freight-logistics-v0.1.2
       - create-freight-logistics-v0.1.3-integration
       - create-freight-logistics-v0.1.4-generation
+      - create-freight-logistics-v0.1.5-terrain
   workflow_dispatch:
 jobs:
   build:
@@ -40,6 +41,9 @@ jobs:
                   'site/paradoxstudios/freight/RailStopFeature.class',
                   'site/paradoxstudios/freight/DepotAutomation.class',
                   'site/paradoxstudios/freight/RailwayNetworkGenerator.class',
+                  'site/paradoxstudios/freight/RailwayTerrain.class',
+                  'site/paradoxstudios/freight/RailwayCurveBuilder.class',
+                  'site/paradoxstudios/freight/RailwayStationBuilder.class',
                   'site/paradoxstudios/freight/RailwayGenerationService.class',
                   'site/paradoxstudios/freight/RailwayGenerationConfig.class',
                   'site/paradoxstudios/freight/StationChunkLoading.class',
@@ -63,6 +67,6 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: create-freight-logistics-0.1.4
+          name: create-freight-logistics-0.1.5
           path: build/libs/*.jar
           if-no-files-found: error
