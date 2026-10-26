@@ -102,7 +102,15 @@ public final class RailwayNetworkGenerator {
                     if(safe(level,roof))
                         level.setBlock(roof,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                 }
+                boolean crossingClearance=
+                    (horizontal&&xLine&&Math.abs(pos.getX()-lineX)<=7)||
+                    (!horizontal&&zLine&&Math.abs(pos.getZ()-lineZ)<=7);
+                boolean platformClearance=willStation&&horizontal&&
+                    Math.abs(pos.getX()-station.getX())<=7;
                 for(int side:new int[]{-3,3}){
+                    // Crossing tracks must have their own tunnel clearances.
+                    // The south wall also has to stop beside station platforms.
+                    if(crossingClearance || (platformClearance && side==3))continue;
                     for(int dy=0;dy<=5;dy++){
                         BlockPos wall=pos.relative(lateral,side).above(dy);
                         if(safe(level,wall))
