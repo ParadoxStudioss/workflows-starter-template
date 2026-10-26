@@ -1,13 +1,18 @@
-# Freight & Logistics
+# Changelog
 
-## 0.1.3 — Create integrations preview
-- Actual Create train-graph/schedule support for automatic return to a registered depot station
-- Temporary 3x3 chunk loading near approaching Create Train Stations (4 stations maximum)
-- Real 27-slot saved warehouse inventory and separate warehouse GUI
-- Distinct management screen layouts for depot, factory, orders, marketplace and railway information
-- Display Link live freight source with pages 1–10, rack and warehouse data
-- Seven Ponder learning scenes with generated structure NBT and localized captions
-- Nine redesigned 3D industrial machine models; 45-element server rack with vents and drive bays
-- Runtime integration uses original Create only; no Steam n' Rails / other addons required
+## 0.1.4 — Railway world-generation foundation
+- Replaced scattered, disconnected legacy stop injection with a deterministic
+  two-directional grid of genuine Create TrackShape rail blocks.
+- Mainline sections line up at chunk borders without forcing neighboring chunks.
+- Made a new-chunk-only deferred generation scheduler.
+- Added stone-brick viaduct supports and enclosed tunnels with train clearance.
+- Added actual Create Train Station blocks, platforms, canopies and station naming.
+- Added NeoForge server config for railway spacing, elevation, and infrastructure.
+- Added /freight railway status, locate and manual generation testing commands.
+- Added fresh-world dedicated-server CI smoke-testing workflow.
+- Kept mod's prior Create management/warehouse/depot/Ponder integrations.
 
-Not yet in game: connected-world railway generation, passenger AI, physical shop train delivery, freight loading, production automation, simulated CPU throughput, automatic junctions/level crossings.
+### Still planned
+Terrain-adaptive grades, switchable curved junctions, village-aware routing,
+distributed locomotive services, full NPC company system, automatic freight
+loading/unloading, and long-distance dispatch.
