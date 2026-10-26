@@ -46,6 +46,12 @@ public final class FreightCommands {
                         .executes(c->buy(c.getSource(),StringArgumentType.getString(c,"part"))))))
 .then(Commands.literal("railway")
                 .then(Commands.literal("status").executes(c->railwayStatus(c.getSource())))
+                .then(Commands.literal("verify")
+                    .then(Commands.argument("x",IntegerArgumentType.integer())
+                        .then(Commands.argument("z",IntegerArgumentType.integer())
+                            .executes(c->railwayVerify(c.getSource(),
+                                IntegerArgumentType.getInteger(c,"x"),
+                                IntegerArgumentType.getInteger(c,"z"))))))
                 .then(Commands.literal("locate").executes(c->railwayLocate(c.getSource())))
                 .then(Commands.literal("generate")
                     .requires(s->s.hasPermission(2))
@@ -78,6 +84,28 @@ public final class FreightCommands {
             " | Active stations named: "+RailwayGenerationService.builtStations+
             " | Obstructed chunks: "+RailwayGenerationService.blockedChunks);
         info(source,"§eOnly newly generated chunks get automatic rails. Changes to spacing/Y break existing alignment.");
+        return 1;
+    }
+    private static int railwayVerify(CommandSourceStack source,int x,int z) {
+        ServerPlayer p=player(source);if(p==null)return 0;
+        ServerLevel level=p.serverLevel();
+        int y=RailwayGenerationConfig.ELEVATION.get();
+        // A section ending at x (usually a chunk border) and the next block
+        // should lie in the SAME Create railway graph, not just look adjacent.
+        var first=new net.minecraft.core.BlockPos(x,y,z);
+        var second=first.east();
+        if(!level.hasChunkAt(first)||!level.hasChunkAt(second)){
+            source.sendFailure(Component.literal("Both candidate track chunks must be loaded."));return 0;
+        }
+        var one=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
+            level,first,net.minecraft.core.Direction.AxisDirection.POSITIVE,new net.minecraft.world.phys.Vec3(1,0,0));
+        var two=com.simibubi.create.content.trains.graph.TrackGraphHelper.getGraphLocationAt(
+            level,second,net.minecraft.core.Direction.AxisDirection.POSITIVE,new net.minecraft.world.phys.Vec3(1,0,0));
+        if(one==null||two==null||one.graph!=two.graph){
+            source.sendFailure(Component.literal("Rail graph DISCONNECTED at x="+x+"->"+(x+1)+", z="+z));
+            return 0;
+        }
+        info(source,"§aRail graph CONNECTED across x="+x+" -> "+(x+1)+" at z="+z);
         return 1;
     }
     private static int railwayLocate(CommandSourceStack source){
@@ -127,6 +155,7 @@ public final class FreightCommands {
         info(source,"§e/freight depot set/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
         info(source,"§e/freight railway status/locate §7- network overview");
+        info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
         info(source,"§e/freight railway generate §7- build planned rails in this chunk (operator)");
         info(source,"§e/freight railgen §7- old straight test track (operator)");
         info(source,"§e/freight issue <item_id> <count> <reward> §7- operators only");
