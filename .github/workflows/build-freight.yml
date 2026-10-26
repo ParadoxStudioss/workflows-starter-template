@@ -52,7 +52,7 @@ jobs:
                   'assets/freightlogistics/lang/en_us.json',
                   'data/freightlogistics/worldgen/configured_feature/railway_stop.json',
                   'data/freightlogistics/worldgen/placed_feature/railway_stop.json',
-                  'data/freightlogistics/neoforge/biome_modifier/railway_stops.json'
+                  'site/paradoxstudios/freight/RailwayNetworkGenerator$StationRequest.class'
               ]
               missing=[n for n in required if n not in names]
               assert not missing,missing

@@ -29,7 +29,7 @@ public final class RailwayGenerationConfig {
             .defineInRange("line_spacing_chunks",24,12,128);
         ELEVATION=builder.comment("Fixed track Y. A fixed Y keeps every chunk seam exactly aligned.",
                 "Above ground this becomes a viaduct; below ground it becomes a tunnel.")
-            .defineInRange("rail_y",88,68,180);
+            .defineInRange("rail_y",80,68,180);
         STATIONS=builder.comment("Build real Create station blocks and boarding platforms on east-west routes.")
             .define("generate_stations",true);
         TUNNELS=builder.comment("Clear a narrow safety envelope through solid natural terrain.")

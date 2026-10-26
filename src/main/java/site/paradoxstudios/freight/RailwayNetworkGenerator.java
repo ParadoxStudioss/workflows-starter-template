@@ -56,7 +56,7 @@ public final class RailwayNetworkGenerator {
         // Reserve entire 16-block rail segment in advance. Never leave a half-built
         // rail line if one protected tile is sitting in its path.
         for(BlockPos rail:rails){
-            if(!safeCorridor(level,rail,trackBlock,y))return new Result(true,false,true,0,0,List.of());
+            if(!safeCorridor(level,rail,trackBlock,y, zLine&&rail.getZ()==lineZ, xLine&&rail.getX()==lineX))return new Result(true,false,true,0,0,List.of());
         }
         boolean willStation=RailwayGenerationConfig.STATIONS.get()&&zLine
                 &&Math.floorMod(chunk.getPos().x,spacing)==4;
@@ -79,9 +79,9 @@ public final class RailwayNetworkGenerator {
             if(shouldTunnel&&!RailwayGenerationConfig.TUNNELS.get())continue;
             if(surface<y-2&&!RailwayGenerationConfig.BRIDGES.get())continue;
             Direction lateral=horizontal?Direction.SOUTH:Direction.EAST;
-            for(int side=-1;side<=1;side++){
+            for(int side=-2;side<=2;side++){
                 BlockPos center=pos.relative(lateral,side);
-                for(int dy=0;dy<=4;dy++){
+                for(int dy=0;dy<=5;dy++){
                     BlockPos clear=center.above(dy);
                     if(clear.getY()>level.getMaxBuildHeight()-2)continue;
                     // Actual track is placed after clearing; do not delete an
@@ -92,6 +92,22 @@ public final class RailwayNetworkGenerator {
                     if(current.isAir())continue;
                     if(current.getBlock()==trackBlock)continue;
                     if(replaceableNatural(current))level.setBlock(clear,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                }
+            }
+            // Enclose underground rock cuts so stone, gravel or water from above
+            // cannot immediately fall or flow into the train's clearance area.
+            if(shouldTunnel){
+                for(int side=-2;side<=2;side++){
+                    BlockPos roof=pos.relative(lateral,side).above(6);
+                    if(safe(level,roof))
+                        level.setBlock(roof,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                }
+                for(int side:new int[]{-3,3}){
+                    for(int dy=0;dy<=5;dy++){
+                        BlockPos wall=pos.relative(lateral,side).above(dy);
+                        if(safe(level,wall))
+                            level.setBlock(wall,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                    }
                 }
             }
             BlockPos base=pos.below();
@@ -121,19 +137,37 @@ public final class RailwayNetworkGenerator {
             int centerX=station.getX();
             for(int dx=-5;dx<=5;dx++) {
                 int px=centerX+dx;
-                for(int zOffset=2;zOffset<=4;zOffset++){
+                for(int zOffset=2;zOffset<=5;zOffset++){
                     BlockPos deck=new BlockPos(px,y-1,lineZ+zOffset);
                     BlockState old=level.getBlockState(deck);
                     if(old.isAir()||replaceableNatural(old))
                         level.setBlock(deck,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                     BlockPos clear=deck.above();
-                    if(replaceableNatural(level.getBlockState(clear)))
-                        level.setBlock(clear,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                    for(int dy=0;dy<=5;dy++){
+                        BlockPos air=clear.above(dy);
+                        if(replaceableNatural(level.getBlockState(air)))
+                            level.setBlock(air,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
+                    }
+                }
+            }
+            // Simple, readable passenger platform canopy and pillars.
+            for(int dx=-6;dx<=6;dx++)
+                for(int dz=3;dz<=5;dz++){
+                    BlockPos canopy=new BlockPos(centerX+dx,y+6,lineZ+dz);
+                    if(safe(level,canopy))
+                        level.setBlock(canopy,dx==-6||dx==6?Blocks.CUT_COPPER.defaultBlockState()
+                            :Blocks.SPRUCE_SLAB.defaultBlockState(),Block.UPDATE_ALL);
+                }
+            for(int dx:new int[]{-6,6}){
+                for(int yy=y;yy<=y+5;yy++){
+                    BlockPos col=new BlockPos(centerX+dx,yy,lineZ+5);
+                    if(safe(level,col))
+                        level.setBlock(col,Blocks.SPRUCE_FENCE.defaultBlockState(),Block.UPDATE_ALL);
                 }
             }
             for(int dx:new int[]{-5,5}){
                 BlockPos lamp=new BlockPos(centerX+dx,y,lineZ+4);
-                if(level.getBlockState(lamp).isAir())
+                if(safe(level,lamp))
                     level.setBlock(lamp,Blocks.LANTERN.defaultBlockState(),Block.UPDATE_ALL);
             }
             BlockPos track=new BlockPos(centerX,y,lineZ);
@@ -155,24 +189,28 @@ public final class RailwayNetworkGenerator {
         return new Result(true,tracks>0,false,tracks,supports,stations);
     }
 
-    private static boolean safeStationSite(ServerLevel level,BlockPos station){
-        if(station==null)return false;
-        if(station.getY()<level.getMinBuildHeight()+4)return false;
-        for(int dx=-5;dx<=5;dx++)for(int dz=-4;dz<=0;dz++){
-            BlockPos p=station.offset(dx,0,dz);
-            if(!safe(level,p))return false;
-        }
+    private static boolean safeStationSite(ServerLevel level,BlockPos station) {
+        if(station==null||station.getY()<level.getMinBuildHeight()+4)return false;
+        // Guarantee a passenger-sized 5-block-high space around the platform.
+        for(int dx=-6;dx<=6;dx++)
+            for(int dz=-4;dz<=1;dz++)
+                for(int dy=0;dy<=5;dy++)
+                    if(!safe(level,station.offset(dx,dy,dz)))return false;
         return true;
     }
-
-    private static boolean safeCorridor(ServerLevel level,BlockPos p,Block block,int y){
-        if(y<level.getMinBuildHeight()+4 || y>level.getMaxBuildHeight()-7)return false;
+    private static boolean safeCorridor(ServerLevel level,BlockPos p,Block block,int y,
+                                        boolean horizontal,boolean vertical) {
+        if(y<level.getMinBuildHeight()+4 || y>level.getMaxBuildHeight()-8)return false;
         BlockState rail=level.getBlockState(p);
         if(rail.getBlock()!=block&&!safe(level,p))return false;
-        for(int height=1;height<=4;height++){
-            for(int dx=-1;dx<=1;dx++)for(int dz=-1;dz<=1;dz++){
-                if(dx!=0&&dz!=0)continue;
-                if(!safe(level,p.offset(dx,height,dz)))return false;
+        // Check only perpendicular sides; checking forward neighbors here would
+        // accidentally request an adjacent chunk at the edge of our 16-block tile.
+        for(int step=-2;step<=2;step++)for(int height=0;height<=6;height++){
+            BlockPos test=horizontal?p.offset(0,height,step):p.offset(step,height,0);
+            if(!safe(level,test))return false;
+            if(horizontal&&vertical){
+                BlockPos alternate=p.offset(step,height,0);
+                if(!safe(level,alternate))return false;
             }
         }
         return true;
