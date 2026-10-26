@@ -71,7 +71,7 @@ public final class RailwayNetworkGenerator {
         // Entire route is rejected if a protected building, block entity or
         // player's track occupies its 5-wide clearance. No half-build.
         for(Rail r:plan.values()){
-            if(!safeCorridor(level,r.pos,r.side,block,r.shape))return blocked();
+            if(!safeCorridor(level,cp,r.pos,r.side,block,r.shape))return blocked();
         }
         int count=0,supports=0;
         for(Rail r:plan.values()){
@@ -297,7 +297,8 @@ public final class RailwayNetworkGenerator {
                         }
                         for(int dy=0;dy<=5;dy++){
                             BlockPos clearance=center.relative(side,k).above(dy);
-                            if(RailwayNetworkGenerator.replaceableNatural(level.getBlockState(clearance)))
+                            if(withinChunk(cp,clearance)&&
+                               RailwayNetworkGenerator.replaceableNatural(level.getBlockState(clearance)))
                                 level.setBlock(clearance,Blocks.AIR.defaultBlockState(),Block.UPDATE_ALL);
                         }
                     }
@@ -342,7 +343,7 @@ public final class RailwayNetworkGenerator {
             }
         }
     }
-    private static boolean safeCorridor(ServerLevel level,BlockPos pos,Direction side,Block block,TrackShape wanted){
+    private static boolean safeCorridor(ServerLevel level,ChunkPos cp,BlockPos pos,Direction side,Block block,TrackShape wanted){
         if(pos.getY()<level.getMinBuildHeight()+8||pos.getY()>level.getMaxBuildHeight()-10)return false;
         BlockState track=level.getBlockState(pos);
         if(track.getBlock()==block){
@@ -350,7 +351,8 @@ public final class RailwayNetworkGenerator {
                 return false;
         } else if(!safe(level,pos))return false;
         for(int k=-2;k<=2;k++)for(int dy=1;dy<=5;dy++){
-            if(!safe(level,pos.relative(side,k).above(dy)))return false;
+            BlockPos around=pos.relative(side,k).above(dy);
+            if(withinChunk(cp,around)&&!safe(level,around))return false;
         }
         return true;
     }
