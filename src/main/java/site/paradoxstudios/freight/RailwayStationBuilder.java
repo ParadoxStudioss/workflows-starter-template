@@ -34,7 +34,7 @@ public final class RailwayStationBuilder {
         if(level.getBlockState(new BlockPos(cx,request.getY(),cz+5)).getBlock()==AllBlocks.TRACK_STATION.get())return true;
         int spacing=RailwayGenerationConfig.GRID_SPACING.get()*16;
         // Plan ahead: all station width is in already loaded chunks.
-        for(int x=cx-43;x<=cx+43;x+=8)
+        for(int x=cx-48;x<=cx+48;x+=8)
             for(int z=cz-9;z<=cz+25;z+=8)
                 if(!level.getChunkSource().hasChunk(x>>4,z>>4))return false;
         for(int x=cx-40;x<=cx+40;x+=4){
