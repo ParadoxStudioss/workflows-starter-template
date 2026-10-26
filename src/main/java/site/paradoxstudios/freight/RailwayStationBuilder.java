@@ -45,7 +45,7 @@ public final class RailwayStationBuilder {
 
         // Both sides of the active railway get 41-block-long, graded platforms.
         for(int dx=-20;dx<=20;dx++){
-            int x=cx+dx,y=RailwayTerrain.route(level,x,cz,spacing);
+            int x=cx+dx,y=RailwayTerrain.route(level,x,cz,spacing,true);
             for(int sign:new int[]{-1,1}){
                 for(int d=2;d<=7;d++){
                     int z=cz+sign*d;
