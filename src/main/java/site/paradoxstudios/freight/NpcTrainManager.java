@@ -375,14 +375,16 @@ public final class NpcTrainManager {
             String label=lane==0?"Freight":"Tanker";
             for(int i=0;i<length;i++){
                 BlockPos rail=new BlockPos(x+i,y,lineZ);
-                level.setBlock(rail,TrackMaterial.ANDESITE.getBlock().defaultBlockState()
-                    .setValue(TrackBlock.SHAPE,TrackShape.XO),Block.UPDATE_ALL);
                 BlockPos bed=rail.below();
                 if(level.getBlockState(bed).isAir())
                     level.setBlock(bed,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+                level.setBlock(rail,TrackMaterial.ANDESITE.getBlock().defaultBlockState()
+                    .setValue(TrackBlock.SHAPE,TrackShape.XO),Block.UPDATE_ALL);
             }
             for(int offset:new int[]{0,174}){
                 BlockPos stationPos=new BlockPos(x+offset,y,lineZ+5);
+                if(level.getBlockState(stationPos.below()).isAir())
+                    level.setBlock(stationPos.below(),Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
                 level.setBlock(stationPos,AllBlocks.TRACK_STATION.getDefaultState(),Block.UPDATE_ALL);
                 if(level.getBlockEntity(stationPos) instanceof StationBlockEntity be){
                     CompoundTag target=new CompoundTag();
