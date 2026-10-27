@@ -3,7 +3,7 @@ loaderVersion="[4,)"
 license="All Rights Reserved"
 [[mods]]
 modId="freightlogistics"
-version="0.1.5.2-alpha"
+version="0.1.5.3-alpha"
 displayName="Create: Freight & Logistics"
 description='''A working first foundation for railway company economy, freight contracts, management blocks, depots and powered crossings.'''
 [[dependencies.freightlogistics]]
