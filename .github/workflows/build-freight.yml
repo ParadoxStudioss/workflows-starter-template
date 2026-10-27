@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
-          import zipfile,glob,json
+          import zipfile,glob,json,base64,hashlib,gzip
           jars=glob.glob('build/libs/create-freight-logistics-*.jar')
           assert len(jars)==1,jars
           with zipfile.ZipFile(jars[0]) as z:
@@ -49,6 +49,8 @@ jobs:
                   'site/paradoxstudios/freight/RailwayAlignment.class',
                   'site/paradoxstudios/freight/NpcTrainManager.class',
                   'site/paradoxstudios/freight/NpcTrainEvents.class',
+                  'assets/freightlogistics/npc/modern_fluid_tanker_train.nbt.b64',
+                  'assets/freightlogistics/npc/modern_item_freight_train.nbt.b64',
                   'site/paradoxstudios/freight/RailwayStationBuilder.class',
                   'site/paradoxstudios/freight/RailwayGenerationService.class',
                   'site/paradoxstudios/freight/RailwayGenerationConfig.class',
@@ -69,6 +71,15 @@ jobs:
               for n in names:
                   if n.endswith('.json') and (n.startswith('assets/freightlogistics/') or n.startswith('data/freightlogistics/')):
                       json.loads(z.read(n))
+              expected={
+                  'modern_fluid_tanker_train.nbt.b64':'cf64da697522d1f241db4316e3faaa8cad1f053d84d0b42b37b5768049537f60',
+                  'modern_item_freight_train.nbt.b64':'9074d9c074f79dd74258da2f68f58a2001f5b0208221b96cf5de3b820173046d',
+              }
+              for name,digest in expected.items():
+                  payload=base64.b64decode(z.read('assets/freightlogistics/npc/'+name),validate=False)
+                  assert hashlib.sha256(payload).hexdigest()==digest,(name,'uploaded NBT mismatch')
+                  assert len(gzip.decompress(payload))>20000,name
+              print('Verified both original train NBT assets against user file SHA-256 hashes.')
               print('Verified',jars[0],len(names),'files and JSON parsing')
           PY
       - uses: actions/upload-artifact@v4
