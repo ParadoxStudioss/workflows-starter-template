@@ -84,6 +84,14 @@ public final class NpcTrainManager {
             Pending p=entry.getValue();
             ServerLevel level=server.getLevel(p.dim());
             if(level==null||!level.hasChunkAt(p.station()))continue;
+            if(level.getBlockEntity(p.station()) instanceof StationBlockEntity stationBE){
+                GlobalStation gs=stationBE.getStation();
+                if(gs==null && p.tries()>=3)gs=stationBE.edgePoint.createEdgePoint();
+                if(gs!=null){
+                    gs.name="NPC Test "+(p.kind().equals("item")?"Freight":"Tanker");
+                    stationBE.notifyUpdate();
+                }
+            }
             Result result=spawn(level,p.station(),p.kind());
             if(result.success()){
                 FreightLogistics.LOGGER.info("NPC train spawned: {}",result.message());
@@ -319,7 +327,7 @@ public final class NpcTrainManager {
                 target.putBoolean("TargetDirection",offset==0);
                 be.edgePoint.read(target,level.registryAccess(),false);
                 be.setChanged();
-                queue(level,stationPos,"item");
+                queue(level,stationPos,offset==0?"item":"fluid");
             }
         }
         return new Result(true,"Two NPC test stations placed. Spawn requests will retry until Create graph registration.");
