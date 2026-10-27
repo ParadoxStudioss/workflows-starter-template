@@ -224,8 +224,8 @@ public final class NpcTrainManager {
         try {nbt=blueprint(kind);}catch(Exception ex){
             return new Result(false,"Invalid train blueprint: "+ex.getMessage());
         }
-        ListTag dims=nbt.getList("size",Tag.TAG_INT);
-        if(dims.size()!=3||dims.getInt(0)!=3||dims.getInt(1)!=7||dims.getInt(2)!=67)
+        int[] dims=nbt.getIntArray("size");
+        if(dims.length!=3||dims[0]!=3||dims[1]!=7||dims[2]!=67)
             return new Result(false,"Unsupported NBT dimensions; expected 3x7x67.");
         ListTag palette=nbt.getList("palette",Tag.TAG_COMPOUND);
         ListTag blocks=nbt.getList("blocks",Tag.TAG_COMPOUND);
@@ -241,9 +241,9 @@ public final class NpcTrainManager {
         Set<BlockPos> occupied=new HashSet<>();
         for(int i=0;i<blocks.size();i++){
             CompoundTag obj=blocks.getCompound(i);
-            ListTag coords=obj.getList("pos",Tag.TAG_INT);
-            if(coords.size()!=3)return new Result(false,"Malformed block position.");
-            int x=coords.getInt(0),y=coords.getInt(1),z=coords.getInt(2);
+            int[] coords=obj.getIntArray("pos");
+            if(coords.length!=3)return new Result(false,"Malformed block position.");
+            int x=coords[0],y=coords[1],z=coords[2];
             int idx=obj.getInt("state");
             if(idx<0||idx>=states.size()||x<0||x>2||y<0||y>6||z<0||z>66)
                 return new Result(false,"Malformed block palette or footprint.");
