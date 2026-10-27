@@ -78,8 +78,11 @@ public final class NpcTrainManager {
     }
 
     public static void tick(net.minecraft.server.MinecraftServer server){
-        if(server.getTickCount()%20!=0 || PENDING.isEmpty())return;
+        if(server.getTickCount()%20!=0)return;
         List<Map.Entry<String,Pending>> snapshot=new ArrayList<>(PENDING.entrySet());
+
+        // Register all test stations before assembling the first train; its
+        // Create Schedule must see both directions at the same time.
         for(var entry:snapshot){
             Pending p=entry.getValue();
             ServerLevel level=server.getLevel(p.dim());
@@ -92,15 +95,32 @@ public final class NpcTrainManager {
                     stationBE.notifyUpdate();
                 }
             }
+        }
+        for(var entry:snapshot){
+            Pending p=entry.getValue();
+            ServerLevel level=server.getLevel(p.dim());
+            if(level==null||!level.hasChunkAt(p.station()))continue;
             Result result=spawn(level,p.station(),p.kind());
             if(result.success()){
                 FreightLogistics.LOGGER.info("NPC train spawned: {}",result.message());
                 PENDING.remove(entry.getKey());
-            }else if(p.tries()>=30){
+            }else if(p.tries()>=40){
                 FreightLogistics.LOGGER.warn("NPC spawn cancelled at {}: {}",p.station(),result.message());
                 PENDING.remove(entry.getKey());
             }else {
                 PENDING.put(entry.getKey(),new Pending(p.dim(),p.station(),p.kind(),p.tries()+1));
+            }
+        }
+
+        // Train graph updates and conductor discovery happen asynchronously.
+        // Retry an absent timetable after both stations exist, without
+        // clobbering user-edited schedules on already operating trains.
+        if(server.getTickCount()%100==0){
+            for(Train t:Create.RAILWAYS.trains.values()){
+                if(!OWNER.equals(t.owner)||t.runtime==null||t.graph==null||
+                   t.runtime.getSchedule()!=null)continue;
+                GlobalStation at=t.getCurrentStation();
+                if(at!=null)configureSchedule(t,at.name);
             }
         }
     }
