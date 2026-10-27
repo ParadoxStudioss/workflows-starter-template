@@ -354,7 +354,7 @@ public final class NpcTrainManager {
      * reversing without claiming a world network is already available.
      */
     public static Result createTestYard(ServerLevel level,BlockPos origin){
-        int length=192;
+        int length=288;
         int y=origin.getY(),z=origin.getZ(),x=origin.getX();
         if(y<level.getMinBuildHeight()+2||y+9>=level.getMaxBuildHeight())
             return new Result(false,"Choose a valid build height.");
@@ -385,7 +385,9 @@ public final class NpcTrainManager {
                 level.setBlock(rail,TrackMaterial.ANDESITE.getBlock().defaultBlockState()
                     .setValue(TrackBlock.SHAPE,TrackShape.XO),Block.UPDATE_ALL);
             }
-            for(int offset:new int[]{0,174}){
+            // At least 96 tracks continue beyond either terminus, so a 67-block
+            // consist can approach and reverse without falling off the edge.
+            for(int offset:new int[]{96,192}){
                 BlockPos stationPos=new BlockPos(x+offset,y,lineZ+5);
                 if(level.getBlockState(stationPos.below()).isAir())
                     level.setBlock(stationPos.below(),Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
@@ -394,17 +396,17 @@ public final class NpcTrainManager {
                     CompoundTag target=new CompoundTag();
                     target.put("TargetTrack",NbtUtils.writeBlockPos(
                         new BlockPos(x+offset,y,lineZ).subtract(stationPos)));
-                    target.putBoolean("TargetDirection",offset==0);
+                    target.putBoolean("TargetDirection",offset==96);
                     be.edgePoint.read(target,level.registryAccess(),false);
                     be.setChanged();
-                    if(offset==0)queue(level,stationPos,type);
+                    if(offset==96)queue(level,stationPos,type);
                     else ENDPOINTS.put(level.dimension().location()+":"+stationPos.asLong(),
                         new Endpoint(level.dimension(),stationPos,"NPC Test "+label+" End",0));
                 }
             }
         }
         return new Result(true,
-            "Two independent freight yards generated, four Create stations placed; item and tanker assembly queued.");
+            "Two independent 288-block freight yards generated, four Create stations placed; item and tanker assembly queued.");
     }
 
 }
