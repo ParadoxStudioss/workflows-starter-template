@@ -318,7 +318,7 @@ public final class NpcTrainManager {
                 "Create failed to assemble the schematic. Check station assembly limits and train blocks.");
             be.exitAssemblyMode();
             train.name=Component.literal(kind.equals("fluid")?"NPC Fluid Tanker":"NPC Item Freight");
-            com.createmod.catnip.platform.CatnipServices.NETWORK.sendToAllClients(
+            net.createmod.catnip.platform.CatnipServices.NETWORK.sendToAllClients(
                 new com.simibubi.create.content.trains.station.TrainEditPacket.TrainEditReturnPacket(
                     train.id,train.name.getString(),train.icon.getId(),train.mapColorIndex));
             for(SuperGlueEntity g:glue)if(g.isAlive())g.discard();
