@@ -58,11 +58,11 @@ try:
     # All demo structures are at Y=210, safely above vanilla terrain.
     # Create the chunks first, preventing command-time worldgen surprises.
     print("Loading test yard chunks...",flush=True)
-    print(r.run("forceload add 256 320 448 320"),flush=True)
+    print(r.run("forceload add 256 320 448 336"),flush=True)
     time.sleep(12)
     result=r.run("execute in minecraft:overworld positioned 256 210 320 run freight npc demo")
     print("Demo yard:",result,flush=True)
-    if "Two NPC test stations placed" not in result:
+    if "Two independent freight yards generated" not in result:
         raise AssertionError("Could not construct Create test yard: "+result)
     ok=False
     last=""
