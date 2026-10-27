@@ -119,7 +119,7 @@ public final class NpcTrainManager {
         }
         if(in==null)throw new IllegalStateException(
             "Missing built-in train schematic "+filename+"; place it in config/freightlogistics/npc/");
-        try(in){return NbtIo.readCompressed(in,NbtAccounter.unlimitedHeap());}
+        try(InputStream stream=in){return NbtIo.readCompressed(stream,NbtAccounter.unlimitedHeap());}
     }
 
     private static Rotation rotation(Direction dir){
