@@ -70,6 +70,8 @@ try:
         time.sleep(2)
         last=r.run("freight npc status")
         if i%15==0:print("NPC fleet:",last,flush=True)
+        if "DERAILED" in last:
+            raise AssertionError("A Create NPC train derailed during assembly/departure: "+last)
         if "2" in last and "NPC Item Freight" in last and "NPC Fluid Tanker" in last and "DERAILED" not in last:
             ok=True
             break
