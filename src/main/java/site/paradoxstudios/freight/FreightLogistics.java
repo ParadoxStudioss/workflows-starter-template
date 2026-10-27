@@ -131,6 +131,7 @@ public final class FreightLogistics {
         NeoForge.EVENT_BUS.register(DepotAutomation.class);
         NeoForge.EVENT_BUS.register(StationChunkLoading.class);
         NeoForge.EVENT_BUS.register(RailwayGenerationService.class);
+        NeoForge.EVENT_BUS.register(NpcTrainEvents.class);
         bus.addListener((net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent e)->
             e.register(StationChunkLoading.TICKET));
     }
