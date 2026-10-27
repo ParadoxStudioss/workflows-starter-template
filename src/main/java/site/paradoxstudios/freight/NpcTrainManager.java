@@ -235,7 +235,10 @@ public final class NpcTrainManager {
             for(int car=0;car<CARRIAGE_START.length;car++){
                 BlockPos min=map(track,direction,0,0,CARRIAGE_START[car]);
                 BlockPos max=map(track,direction,2,6,CARRIAGE_END[car]);
-                AABB bb=new AABB(min,max).inflate(.51);
+                AABB bb=new AABB(
+                    Math.min(min.getX(),max.getX()),Math.min(min.getY(),max.getY()),Math.min(min.getZ(),max.getZ()),
+                    Math.max(min.getX(),max.getX())+1,Math.max(min.getY(),max.getY())+1,Math.max(min.getZ(),max.getZ())+1);
+
                 SuperGlueEntity glueEntity=new SuperGlueEntity(level,bb);
                 if(!level.addFreshEntity(glueEntity))
                     throw new IllegalStateException("Could not add glue entity");
