@@ -113,6 +113,16 @@ public final class NpcTrainManager {
         };
         String name="/assets/freightlogistics/npc/"+filename;
         InputStream in=NpcTrainManager.class.getResourceAsStream(name);
+        if(in==null){
+            try(InputStream encoded=NpcTrainManager.class.getResourceAsStream(name+".b64")){
+                if(encoded!=null){
+                    String content=new String(encoded.readAllBytes(),
+                        java.nio.charset.StandardCharsets.US_ASCII);
+                    byte[] bytes=Base64.getMimeDecoder().decode(content);
+                    in=new java.io.ByteArrayInputStream(bytes);
+                }
+            }
+        }
         if(in==null) {
             Path external=Path.of("config","freightlogistics","npc",filename);
             if(Files.isRegularFile(external))in=Files.newInputStream(external);
