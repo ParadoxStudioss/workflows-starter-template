@@ -69,7 +69,19 @@ public final class NpcTrainManager {
         for(Train t:Create.RAILWAYS.trains.values()){
             if(!OWNER.equals(t.owner))continue;
             String at=t.getCurrentStation()!=null?t.getCurrentStation().name:"in transit";
-            lines.add(t.name.getString()+" at "+at+
+            String heading=t.navigation.destination!=null?
+                " toward "+t.navigation.destination.name:"";
+            String position="";
+            if(t.graph!=null&&!t.carriages.isEmpty()){
+                var point=t.carriages.get(0).getLeadingPoint();
+                if(point!=null && point.edge!=null){
+                    var xyz=point.getPosition(t.graph);
+                    position=String.format(java.util.Locale.ROOT,
+                        " [x %.1f, y %.1f, z %.1f]",xyz.x,xyz.y,xyz.z);
+                }
+            }
+            lines.add(t.name.getString()+" at "+at+heading+position+
+                " / speed "+String.format(java.util.Locale.ROOT,"%.3f",t.speed)+
                 " / "+(t.derailed?"DERAILED":t.navigation.destination!=null?"moving":"idle"));
         }
         return lines;
