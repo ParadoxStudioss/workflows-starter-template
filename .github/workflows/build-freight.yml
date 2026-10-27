@@ -9,6 +9,7 @@ on:
       - create-freight-logistics-v0.1.5-terrain
       - create-freight-logistics-v0.1.5.1-alpha
       - create-freight-logistics-v0.1.5.2-alpha
+      - create-freight-logistics-v0.1.5.3-alpha-npc
   workflow_dispatch:
 jobs:
   build:
@@ -46,6 +47,8 @@ jobs:
                   'site/paradoxstudios/freight/RailwayTerrain.class',
                   'site/paradoxstudios/freight/RailwayCurveBuilder.class',
                   'site/paradoxstudios/freight/RailwayAlignment.class',
+                  'site/paradoxstudios/freight/NpcTrainManager.class',
+                  'site/paradoxstudios/freight/NpcTrainEvents.class',
                   'site/paradoxstudios/freight/RailwayStationBuilder.class',
                   'site/paradoxstudios/freight/RailwayGenerationService.class',
                   'site/paradoxstudios/freight/RailwayGenerationConfig.class',
@@ -70,6 +73,6 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: create-freight-logistics-0.1.5.2-alpha
+          name: create-freight-logistics-0.1.5.3-alpha
           path: build/libs/*.jar
           if-no-files-found: error
