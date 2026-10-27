@@ -80,6 +80,15 @@ public final class FreightCommands {
                 .then(Commands.literal("generate")
                     .requires(s->s.hasPermission(2))
                     .executes(c->railwayGenerate(c.getSource()))))
+            .then(Commands.literal("npc")
+                .then(Commands.literal("status").executes(c->npcStatus(c.getSource())))
+                .then(Commands.literal("demo")
+                    .requires(src->src.hasPermission(2))
+                    .executes(c->npcDemo(c.getSource())))
+                .then(Commands.literal("spawn")
+                    .requires(src->src.hasPermission(2))
+                    .then(Commands.literal("item").executes(c->npcSpawn(c.getSource(),"item")))
+                    .then(Commands.literal("fluid").executes(c->npcSpawn(c.getSource(),"fluid")))))
             .then(Commands.literal("railgen")
                 .requires(s->s.hasPermission(2))
                 .executes(c->railgen(c.getSource())))
@@ -94,6 +103,42 @@ public final class FreightCommands {
                                 IntegerArgumentType.getInteger(c,"reward")))))))
         );
     }
+    private static int npcStatus(CommandSourceStack source){
+        info(source,"§6Freight NPC trains: §e"+NpcTrainManager.count()+"§7 real Create trains active.");
+        var trains=NpcTrainManager.status();
+        if(trains.isEmpty())info(source,"§7No NPC trains yet. Use /freight npc demo to prepare a test yard.");
+        for(String line:trains)info(source,"§7"+line);
+        return 1;
+    }
+    private static int npcDemo(CommandSourceStack source){
+        BlockPos at=BlockPos.containing(source.getPosition());
+        var r=NpcTrainManager.createTestYard(source.getLevel(),at);
+        if(!r.success()){source.sendFailure(Component.literal(r.message()));return 0;}
+        info(source,"§a"+r.message());
+        return 1;
+    }
+    private static int npcSpawn(CommandSourceStack source,String kind){
+        ServerLevel level=source.getLevel();
+        BlockPos center=BlockPos.containing(source.getPosition());
+        BlockPos station=null;
+        double distance=Double.MAX_VALUE;
+        for(BlockPos at:BlockPos.betweenClosed(center.offset(-18,-7,-18),
+            center.offset(18,7,18))){
+            if(!level.hasChunkAt(at))continue;
+            if(!(level.getBlockEntity(at) instanceof com.simibubi.create.content.trains.station.StationBlockEntity))continue;
+            double ds=at.distSqr(center);
+            if(ds<distance){distance=ds;station=at.immutable();}
+        }
+        if(station==null){
+            source.sendFailure(Component.literal("No loaded Create Train Station within 18 blocks."));
+            return 0;
+        }
+        var r=NpcTrainManager.spawn(level,station,kind);
+        if(!r.success()){source.sendFailure(Component.literal(r.message()));return 0;}
+        info(source,"§a"+r.message());
+        return 1;
+    }
+
     private static int railwayStatus(CommandSourceStack source) {
         info(source,"§6Freight Railway Generation §7- server settings");
         info(source,"§7Enabled: "+RailwayGenerationConfig.ENABLED.get()+
@@ -271,7 +316,7 @@ public final class FreightCommands {
     }
     private record BlockPosAtPosition(net.minecraft.core.BlockPos pos){}
     private static int help(CommandSourceStack source){
-        info(source,"§6Freight & Logistics §7v0.1.5.1-alpha");
+        info(source,"§6Freight & Logistics §7v0.1.5.3-alpha");
         info(source,"§e/freight company create <name> §7- create company");
         info(source,"§e/freight balance §7- company funds");
         info(source,"§e/freight contracts [1-10] §7- paginated contract list");
@@ -279,6 +324,7 @@ public final class FreightCommands {
         info(source,"§e/freight deliver §7- submit real inventory items for your contract");
         info(source,"§e/freight depot set/return/toggle/status §7- register a Create station and automate returns");
         info(source,"§e/freight shop §7and §e/freight shop buy <item>");
+        info(source,"§e/freight npc demo/spawn/status §7- true Create freight trains");
         info(source,"§e/freight railway status/locate §7- network overview");
         info(source,"§e/freight railway repair §7- repair loaded railway chunks near you");
         info(source,"§e/freight railway verify <x> <z> §7- actual Create graph continuity");
