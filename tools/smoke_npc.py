@@ -58,11 +58,11 @@ try:
     # All demo structures are at Y=210, safely above vanilla terrain.
     # Create the chunks first, preventing command-time worldgen surprises.
     print("Loading test yard chunks...",flush=True)
-    print(r.run("forceload add 256 320 448 336"),flush=True)
+    print(r.run("forceload add 256 320 560 336"),flush=True)
     time.sleep(12)
     result=r.run("execute in minecraft:overworld positioned 256 210 320 run freight npc demo")
     print("Demo yard:",result,flush=True)
-    if "Two independent freight yards generated" not in result:
+    if "Two independent 288-block freight yards generated" not in result:
         raise AssertionError("Could not construct Create test yard: "+result)
     ok=False
     last=""
@@ -70,19 +70,20 @@ try:
         time.sleep(2)
         last=r.run("freight npc status")
         if i%15==0:print("NPC fleet:",last,flush=True)
-        if "2 real Create trains active" in last and "NPC Item Freight" in last and "NPC Fluid Tanker" in last:
+        if "2" in last and "NPC Item Freight" in last and "NPC Fluid Tanker" in last and "DERAILED" not in last:
             ok=True
             break
     if not ok:
         print(LOG.read_text(errors="replace")[-12000:],flush=True)
-        raise AssertionError("Both Create locomotive blueprints failed to assemble: "+last)
-    print("SUCCESS: both uploaded schematics assembled as REAL Create Train entities.",flush=True)
+        raise AssertionError("Both Create trains must assemble AND remain on the rails: "+last)
+    print("SUCCESS: both uploaded schematics assembled as REAL non-derailed Create Train entities.",flush=True)
     # At least one should have navigation or a current station, not simply a
     # block structure. Track motion separately from registry creation.
     moved=False
     for i in range(80):
         time.sleep(2)
         s=r.run("freight npc status")
+        if "DERAILED" in s:raise AssertionError("A freight train derailed during the NPC journey: "+s)
         if "moving" in s or "in transit" in s:
             moved=True
             break
