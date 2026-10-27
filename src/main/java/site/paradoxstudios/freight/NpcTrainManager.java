@@ -50,6 +50,9 @@ public final class NpcTrainManager {
     private static final UUID OWNER=UUID.nameUUIDFromBytes(
         "freightlogistics:system_npc".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     private static final Map<String,Pending> PENDING=new LinkedHashMap<>();
+    private record Endpoint(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> dim,
+                            BlockPos pos,String name,int attempts){}
+    private static final Map<String,Endpoint> ENDPOINTS=new LinkedHashMap<>();
     private static final int[] CARRIAGE_START={0,13,24,35,46,57};
     private static final int[] CARRIAGE_END={10,22,33,44,55,66};
     public record Result(boolean success,String message){}
@@ -80,6 +83,24 @@ public final class NpcTrainManager {
     public static void tick(net.minecraft.server.MinecraftServer server){
         if(server.getTickCount()%20!=0)return;
         List<Map.Entry<String,Pending>> snapshot=new ArrayList<>(PENDING.entrySet());
+        for(var entry:new ArrayList<>(ENDPOINTS.entrySet())){
+            Endpoint end=entry.getValue();
+            ServerLevel level=server.getLevel(end.dim());
+            if(level==null||!level.hasChunkAt(end.pos()))continue;
+            if(level.getBlockEntity(end.pos()) instanceof StationBlockEntity be){
+                GlobalStation gs=be.getStation();
+                if(gs==null && end.attempts()>=3)gs=be.edgePoint.createEdgePoint();
+                if(gs!=null){
+                    gs.name=end.name();
+                    be.notifyUpdate();
+                    ENDPOINTS.remove(entry.getKey());
+                    continue;
+                }
+            }
+            if(end.attempts()>60)ENDPOINTS.remove(entry.getKey());
+            else ENDPOINTS.put(entry.getKey(),new Endpoint(end.dim(),end.pos(),
+                end.name(),end.attempts()+1));
+        }
 
         // Register all test stations before assembling the first train; its
         // Create Schedule must see both directions at the same time.
@@ -91,7 +112,7 @@ public final class NpcTrainManager {
                 GlobalStation gs=stationBE.getStation();
                 if(gs==null && p.tries()>=3)gs=stationBE.edgePoint.createEdgePoint();
                 if(gs!=null){
-                    gs.name="NPC Test "+(p.kind().equals("item")?"Freight":"Tanker");
+                    gs.name="NPC Test "+(p.kind().equals("item")?"Freight Start":"Tanker Start");
                     stationBE.notifyUpdate();
                 }
             }
@@ -333,36 +354,51 @@ public final class NpcTrainManager {
         int y=origin.getY(),z=origin.getZ(),x=origin.getX();
         if(y<level.getMinBuildHeight()+2||y+9>=level.getMaxBuildHeight())
             return new Result(false,"Choose a valid build height.");
-        for(int i=0;i<length;i++)for(int dz=-2;dz<=2;dz++)
-            for(int dy=0;dy<=8;dy++){
-                BlockPos p=new BlockPos(x+i,y+dy,z+dz);
-                BlockState old=level.getBlockState(p);
-                if(!old.isAir())
-                    return new Result(false,"NPC demo track must be built in an empty 192x5x9 area. Obstruction "+p.toShortString());
-            }
-        for(int i=0;i<length;i++){
-            BlockPos rail=new BlockPos(x+i,y,z);
-            level.setBlock(rail,TrackMaterial.ANDESITE.getBlock().defaultBlockState()
-                .setValue(TrackBlock.SHAPE,TrackShape.XO),Block.UPDATE_ALL);
-            BlockPos bed=rail.below();
-            if(level.getBlockState(bed).isAir())
-                level.setBlock(bed,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+        // Two physically separate test tracks stop real freight trains from
+        // facing one another on a single line. The demo never changes an
+        // existing railway and is deliberately not automatic world generation.
+        for(int lane:new int[]{0,16}){
+            int lineZ=z+lane;
+            for(int i=0;i<length;i++)
+                for(int dz=-2;dz<=6;dz++)
+                    for(int dy=0;dy<=8;dy++){
+                        BlockPos p=new BlockPos(x+i,y+dy,lineZ+dz);
+                        BlockState old=level.getBlockState(p);
+                        if(!old.isAir())
+                            return new Result(false,
+                                "NPC test yard needs empty space: "+p.toShortString());
+                    }
         }
-        for(int offset:new int[]{0,174}){
-            BlockPos stationPos=new BlockPos(x+offset,y,z+5);
-            if(!level.getBlockState(stationPos).isAir())
-                return new Result(false,"Station site blocked at "+stationPos.toShortString());
-            level.setBlock(stationPos,AllBlocks.TRACK_STATION.getDefaultState(),Block.UPDATE_ALL);
-            if(level.getBlockEntity(stationPos) instanceof StationBlockEntity be){
-                CompoundTag target=new CompoundTag();
-                target.put("TargetTrack",NbtUtils.writeBlockPos(
-                    new BlockPos(x+offset,y,z).subtract(stationPos)));
-                target.putBoolean("TargetDirection",offset==0);
-                be.edgePoint.read(target,level.registryAccess(),false);
-                be.setChanged();
-                queue(level,stationPos,offset==0?"item":"fluid");
+        for(int lane:new int[]{0,16}){
+            int lineZ=z+lane;
+            String type=lane==0?"item":"fluid";
+            String label=lane==0?"Freight":"Tanker";
+            for(int i=0;i<length;i++){
+                BlockPos rail=new BlockPos(x+i,y,lineZ);
+                level.setBlock(rail,TrackMaterial.ANDESITE.getBlock().defaultBlockState()
+                    .setValue(TrackBlock.SHAPE,TrackShape.XO),Block.UPDATE_ALL);
+                BlockPos bed=rail.below();
+                if(level.getBlockState(bed).isAir())
+                    level.setBlock(bed,Blocks.STONE_BRICKS.defaultBlockState(),Block.UPDATE_ALL);
+            }
+            for(int offset:new int[]{0,174}){
+                BlockPos stationPos=new BlockPos(x+offset,y,lineZ+5);
+                level.setBlock(stationPos,AllBlocks.TRACK_STATION.getDefaultState(),Block.UPDATE_ALL);
+                if(level.getBlockEntity(stationPos) instanceof StationBlockEntity be){
+                    CompoundTag target=new CompoundTag();
+                    target.put("TargetTrack",NbtUtils.writeBlockPos(
+                        new BlockPos(x+offset,y,lineZ).subtract(stationPos)));
+                    target.putBoolean("TargetDirection",offset==0);
+                    be.edgePoint.read(target,level.registryAccess(),false);
+                    be.setChanged();
+                    if(offset==0)queue(level,stationPos,type);
+                    else ENDPOINTS.put(level.dimension().location()+":"+stationPos.asLong(),
+                        new Endpoint(level.dimension(),stationPos,"NPC Test "+label+" End",0));
+                }
             }
         }
-        return new Result(true,"Two NPC test stations placed. Spawn requests will retry until Create graph registration.");
+        return new Result(true,
+            "Two independent freight yards generated, four Create stations placed; item and tanker assembly queued.");
     }
+
 }
