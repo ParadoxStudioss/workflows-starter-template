@@ -81,18 +81,27 @@ try:
     print("SUCCESS: both uploaded schematics assembled as REAL non-derailed Create Train entities.",flush=True)
     # At least one should have navigation or a current station, not simply a
     # block structure. Track motion separately from registry creation.
-    moved=False
-    for i in range(80):
+    seen_end={"Item Freight":False,"Fluid Tanker":False}
+    seen_return={"Item Freight":False,"Fluid Tanker":False}
+    moving=False
+    for i in range(120):
         time.sleep(2)
-        s=r.run("freight npc status")
-        if "DERAILED" in s:raise AssertionError("A freight train derailed during the NPC journey: "+s)
-        if "moving" in s or "in transit" in s:
-            moved=True
-            break
-    if not moved:
-        print("NOTE: trains assembled, but no train was observed in transit in this window",flush=True)
-    else:
-        print("SUCCESS: at least one NPC train is actively navigating.",flush=True)
+        state=r.run("freight npc status")
+        if "DERAILED" in state:raise AssertionError("A freight train derailed during the NPC journey: "+state)
+        if "moving" in state or "in transit" in state:moving=True
+        for kind,line in [("Item Freight","Freight"),("Fluid Tanker","Tanker")]:
+            if f"NPC {kind} at NPC Test {line} End" in state:
+                seen_end[kind]=True
+            if seen_end[kind] and f"NPC {kind} at NPC Test {line} Start" in state:
+                seen_return[kind]=True
+        if i%15==0:print("Roundtrip progress:",seen_end,seen_return,state,flush=True)
+        if all(seen_return.values()):break
+    if not moving:
+        raise AssertionError("No train was seen moving on its native Create schedule.")
+    if not all(seen_return.values()):
+        raise AssertionError("Both NPC trains did not reach a destination and RETURN: "+
+            repr(seen_end)+" / "+repr(seen_return)+" / "+state)
+    print("SUCCESS: BOTH CREATE NPC trains completed an actual two-station roundtrip.",flush=True)
     log=LOG.read_text(errors="replace")
     if "Unable to build railway" in log or "Exception ticking" in log:
         print(log[-10000:],flush=True)
